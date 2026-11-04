@@ -54,4 +54,10 @@ Corporate invoicing rules:
 - FLAT-RATE PROMOS: admin can create a flat fee for a zone and date range (e.g. GHS 25 anywhere in Accra).
 - Cash on Delivery (COD): rider collects item value; platform tracks it to settlement.
 - Who pays: sender, recipient, or vendor wallet.
+Pricing rules (confirmed):
+- E-commerce/bulk: each stop is billed a fixed amount looked up from that stop's weight band + destination zone. No distance or time charge.
+- Express: the quoted price is locked at booking. The client pays the quote even if traffic makes the trip longer. The price only changes if the client changes the trip.
+- Express weight: parcels over 15 kg are refused at booking (bike-only service).
+- Mid-trip changes when the client already paid upfront: the extra amount is collected on delivery, and the client chooses either a Hubtel MoMo/card prompt or cash to the rider.
+- Failed and returned deliveries are charged 50% of the original delivery fee.
 The pricing engine lives in `packages/pricing` and is the ONLY place prices are calculated. Always show the client an estimated quote before they confirm.
