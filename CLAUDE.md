@@ -100,3 +100,9 @@ Lifecycle details (confirmed):
 - Rider earnings: fixed pickup fee + fixed per-successful-delivery/stop fee (QCS fleet) OR commission % (independent riders); bonuses, deductions, cash-float tracking. Weekly payout via Hubtel; rider can request instant cash-out (fee configurable).
 - Corporate accounts: monthly invoice with credit limit (see the corporate invoicing rules in section 4).
 - Promo codes, referral credits, refunds — all through the wallet ledger. Ledger is double-entry; balances are never edited directly.
+
+Money details (confirmed):
+- COD payout: vendors receive the full COD amount collected. QCS delivery fees are billed separately (charged to the vendor wallet or invoiced), never deducted from COD.
+- Rider COD remittance: riders must remit all COD cash by end of day. If they miss the deadline or reach their cash float limit, they receive no new COD jobs until they remit.
+- Client wallet refunds: a client can request their wallet balance back; it is refunded to MoMo via Hubtel disbursement, to the same MoMo number used to top up (fraud protection).
+- Legal check before launch: confirm with a lawyer and Hubtel that the wallets comply with Bank of Ghana e-money rules (Payment Systems and Services Act, 2019).
