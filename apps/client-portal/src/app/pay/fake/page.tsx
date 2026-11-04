@@ -8,7 +8,7 @@ function Fake() {
   const ref = sp.get("ref") ?? "";
   const go = async (ok: boolean) => {
     await fetch("/api/v1/payments/fake-complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ref, ok }) });
-    window.location.href = `/pay/return?ref=${ref}${sp.get("app") ? "&app=1" : ""}`;
+    window.location.href = `/pay/return?ref=${ref}${sp.get("app") ? `&app=${sp.get("app")}` : ""}${sp.get("kind") ? `&kind=${sp.get("kind")}` : ""}`;
   };
   return (
     <main className="auth-wrap">

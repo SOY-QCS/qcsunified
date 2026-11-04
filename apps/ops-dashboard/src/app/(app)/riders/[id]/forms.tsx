@@ -35,3 +35,23 @@ export function DocReview({ doc, expires }: { doc: string; expires: string | nul
     </div>
   );
 }
+
+export function Adjustment({ rider }: { rider: string }) {
+  const a = useRun();
+  const [kind, setKind] = useState<"bonus" | "deduction">("bonus");
+  const [amt, setAmt] = useState("");
+  const [why, setWhy] = useState("");
+  return (
+    <div className="card">
+      <strong>Bonus or deduction</strong>
+      <div className="row" style={{ alignItems: "end" }}>
+        <div><label>Type</label><select value={kind} onChange={(e) => setKind(e.target.value as "bonus" | "deduction")}><option value="bonus">Bonus</option><option value="deduction">Deduction</option></select></div>
+        <div><label>Amount (GHS)</label><input inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} /></div>
+        <div><label>Reason (the rider sees it)</label><input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="e.g. Rider of the week" /></div>
+        <div style={{ flex: "0 0 auto" }}><button className="btn" disabled={a.pending || !(Number(amt) > 0) || why.trim().length < 5}
+          onClick={() => a.run(() => rpcAction("add_rider_adjustment", { p_rider: rider, p_kind: kind, p_amount: Math.round(Number(amt) * 100), p_reason: why }, "Added to the rider's earnings."), () => { setAmt(""); setWhy(""); })}>Add</button></div>
+      </div>
+      <a.Msg />
+    </div>
+  );
+}

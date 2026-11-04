@@ -13,7 +13,9 @@ const TEXT: Record<string, { title: string; body: string }> = {
 function Status() {
   const sp = useSearchParams();
   const ref = sp.get("ref") ?? "";
-  const app = sp.get("app") === "1";
+  const appParam = sp.get("app");
+  const app = appParam === "1" || appParam === "rider";
+  const remit = sp.get("kind") === "remit";
   const [state, setState] = useState<string>(sp.get("cancelled") ? "cancelled" : "pending");
 
   useEffect(() => {
@@ -29,10 +31,10 @@ function Status() {
   }, [ref, state]);
 
   useEffect(() => {
-    if (app && state !== "pending") window.location.href = `qcs-client://payment?ref=${ref}&state=${state}`;
-  }, [app, ref, state]);
+    if (app && state !== "pending") window.location.href = `${appParam === "rider" ? "qcs-rider" : "qcs-client"}://payment?ref=${ref}&state=${state}`;
+  }, [app, appParam, ref, state]);
 
-  const t = TEXT[state] ?? TEXT.pending!;
+  const t = remit && state === "paid" ? { title: "Cash handed in ✓", body: "Thank you. The cash is recorded against your parcels." } : TEXT[state] ?? TEXT.pending!;
   return (
     <main className="auth-wrap">
       <div className="auth-card" style={{ textAlign: "center" }}>

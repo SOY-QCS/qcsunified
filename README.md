@@ -290,9 +290,8 @@ own city (the database enforces it, not just the screens). Super Admin, Finance 
 | **Cities & zones** | Draw zones on the map (click corners, drag to reshape, right-click a corner to remove). Super Admin adds cities. |
 | **Settings** | Every operational setting: default + per-city value. |
 
-**Rider pay** isn't paid out yet: the dashboard shows an *estimate* from Settings → `rider_pay`
-(fleet: GHS 5 per trip pickup + GHS 8 per delivered stop; independent: 20% of delivery fees — placeholders,
-please set real values). Weekly payouts come with the rider payouts phase.
+**Rider pay** rates are in Settings → `rider_pay` (placeholders: fleet GHS 5 per trip pickup + GHS 8 per
+delivered stop; independent 20% of delivery fees). Earnings and payouts: see Phase 8.
 
 **Maps** need `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` (Maps JavaScript API) in the dashboard's Vercel settings;
 without it every page still works, just without the map.
@@ -300,3 +299,36 @@ without it every page still works, just without the map.
 ### Tests
 - `supabase/tests/70_ops_dashboard.sql`: city scoping, map states, exceptions, reassign/split/merge/plan, rider and vendor rules, zones, hubs, settings.
 - `supabase/tests/api-check.sh`: runs every query and function call in the apps against the real Supabase API layer (PostgREST). It catches broken joins and misspelled columns.
+
+## Phase 8 — Rider earnings, COD and payouts
+
+Every cedi moves through the double-entry ledger (all wallets always add up to zero; the COD page warns if not).
+
+**Rider earnings (automatic).**
+- **QCS fleet:** a pickup fee once per trip, plus a fee per successful stop.
+- **Independent riders:** their commission % of each delivery fee.
+
+Paid at the moment of pickup or delivery, to whoever did it (after a reassignment the new rider is paid for
+what they deliver). Each piece of work is paid once only. Finance adds **bonuses / deductions** with a reason on the rider's page.
+Rates are in Settings → `rider_pay`, with per-city overrides.
+
+**Rider app → My earnings & cash:** today and this week, job by job; cash being held for QCS, parcel by parcel;
+**hand in by MoMo** (Hubtel checkout) or at the hub; MoMo number for payouts; **instant cash-out** (fee in Settings).
+
+**COD cash path:** rider collects → hands in by MoMo (automatic) or at a hub (hub staff press "Received" on
+Finance → COD cash) → Finance records the bank deposit → paid to the vendor in a payout batch. Vendors get
+the full COD; their delivery fees stay in their separate fees wallet. Vendors with fees unpaid for 7+ days
+have their COD payout put on hold automatically (and are notified).
+
+**Payout batches (Finance → Payout batches).** Every morning at 06:00 the system *prepares* vendor COD
+batches (daily vendors; weekly vendors on the payout day) and, on the rider payout day, the rider batch.
+Preparing sets the money aside; **nothing is sent until a second Finance person approves** (the person who
+prepared it can't approve it; Settings → `payout_two_person_rule`). Riders holding late COD cash are put on hold.
+On approval each payout goes to Hubtel; Hubtel's callback marks it paid; a failed transfer puts the money
+back in the wallet. If Hubtel isn't configured, approval is refused (nothing gets stuck).
+
+**Exports (Finance → Export):** CSV ledger journal, payouts, COD and rider earnings for any dates.
+
+### Tests
+`supabase/tests/80_earnings_payouts.sql`: earnings, once-only pay, COD through the ledger, hand-in, banking,
+two-person approval, holds, failed transfers, cash-out fees, reconciliation, exports, ledger balance.

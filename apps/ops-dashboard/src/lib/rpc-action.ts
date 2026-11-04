@@ -14,6 +14,7 @@ const ALLOWED = new Set([
   "assign_trip", "reassign_trip", "unassign_trip", "split_trip", "merge_trips", "plan_trip", "start_dispatch",
   "set_rider_status", "review_rider_document", "set_vendor_controls", "save_zone", "save_city", "save_hub",
   "save_setting", "clear_city_setting", "decide_pod_override", "review_pod_flag", "review_vendor_kyc",
+  "create_rider_payout_batch", "create_vendor_cod_batch", "cancel_payout_batch", "release_payout_hold", "receive_cod_cash", "bank_hub_cash", "add_rider_adjustment",
 ]);
 
 export async function rpcAction(fn: string, args: Record<string, unknown>, done: string, revalidate = "/"): Promise<Result> {

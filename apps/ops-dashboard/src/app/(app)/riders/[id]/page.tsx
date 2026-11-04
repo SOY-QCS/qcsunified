@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
 import { ghs, has, statusText, when } from "@/lib/ops";
 import { RpcButton } from "@/components/run";
-import { DocReview, MoneyForm } from "./forms";
+import { Adjustment, DocReview, MoneyForm } from "./forms";
 
 const first = <T,>(x: T | T[] | null | undefined): T | null => (Array.isArray(x) ? x[0] ?? null : x ?? null);
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
@@ -18,11 +18,13 @@ export default async function RiderPage({ params, searchParams }: PageProps<"/ri
   if (!r) notFound();
   const to = /^\d{4}-\d{2}-\d{2}$/.test(one(sp.to)) ? one(sp.to) : new Date().toISOString().slice(0, 10);
   const from = /^\d{4}-\d{2}-\d{2}$/.test(one(sp.from)) ? one(sp.from) : new Date(Date.now() - 29 * 86_400_000).toISOString().slice(0, 10);
-  const [{ data: stats }, { data: docs }, { data: ratings }, { data: trips }] = await Promise.all([
+  const [{ data: stats }, { data: docs }, { data: ratings }, { data: trips }, { data: earnings }, { data: wallet }] = await Promise.all([
     sb.rpc("rider_stats", { p_rider: id, p_from: from, p_to: to }),
     sb.from("rider_documents").select("id, doc_type, storage_path, number, expires_on, status, review_note").eq("rider_id", id).order("created_at"),
     sb.from("ratings").select("score, tags, comment, created_at, orders(tracking_number)").eq("rider_id", id).eq("kind", "client").order("created_at", { ascending: false }).limit(10),
     sb.from("trips").select("id, trip_type, status, started_at, completed_at, orders(count)").eq("rider_id", id).order("created_at", { ascending: false }).limit(10),
+    sb.from("rider_earnings").select("kind, amount, description, created_at").eq("rider_id", id).order("created_at", { ascending: false }).limit(15),
+    sb.from("wallets").select("balance").eq("owner_type", "rider").eq("owner_id", id).maybeSingle(),
   ]);
   const paths = (docs ?? []).map((d) => d.storage_path);
   const { data: signed } = paths.length ? await sb.storage.from("kyc").createSignedUrls(paths, 600) : { data: [] };
@@ -43,11 +45,11 @@ export default async function RiderPage({ params, searchParams }: PageProps<"/ri
       <div className="row" style={{ marginTop: 12 }}>
         {[["Rating", `★ ${Number(s.rating ?? 0).toFixed(1)} (${s.ratings_count ?? 0})`], ["Acceptance", s.acceptance_rate != null ? `${s.acceptance_rate}%` : "—"], ["Score", s.score],
           ["Delivered", s.delivered], ["Failed", s.failed], ["Trips", s.trips], ["Express on time", s.express_on_time],
-          ["Earnings (estimate)", ghs(Number(s.earnings_estimate ?? 0))], ["Cash held", ghs(Number(s.cod_held ?? 0))]].map(([k, val]) => (
+          ["Earned (from the ledger)", ghs(Number(s.earned ?? 0))], ["Unpaid balance", ghs(wallet?.balance ?? 0)], ["Cash held", ghs(Number(s.cod_held ?? 0))]].map(([k, val]) => (
           <div key={String(k)} className="card" style={{ padding: 12 }}><div className="muted">{k}</div><div style={{ fontSize: 20, fontWeight: 800 }}>{val ?? "—"}</div></div>
         ))}
       </div>
-      <p className="muted">Earnings are an estimate from {s.pay_basis === "fleet" ? "the fleet pickup + per-delivery fees" : "this rider's commission on delivery fees"} (Settings → rider pay). Actual pay runs come with rider payouts.</p>
+      <p className="muted">Paid as {s.pay_basis === "fleet" ? "QCS fleet: pickup fee per trip + fee per delivered stop" : "independent: commission on each delivery fee"} (Settings → rider pay). The unpaid balance goes out in the next weekly payout batch.</p>
 
       {isAdmin && (
         <div className="card">
@@ -60,6 +62,11 @@ export default async function RiderPage({ params, searchParams }: PageProps<"/ri
         </div>
       )}
       {(isAdmin || has(me, "finance")) && <MoneyForm rider={id} commission={r.commission_rate_bp} limit={r.cod_float_limit} fleet={r.rider_type === "fleet"} />}
+
+      {has(me, "super_admin", "finance") && <Adjustment rider={id} />}
+      <h2>Latest earnings</h2>
+      <table><tbody>{(earnings ?? []).map((x, i) => <tr key={i}><td>{when(x.created_at)}</td><td>{x.kind}</td><td>{x.description}</td><td style={{ color: x.amount < 0 ? "var(--danger)" : undefined }}>{ghs(x.amount)}</td></tr>)}
+        {!earnings?.length && <tr><td className="muted">Nothing earned yet.</td></tr>}</tbody></table>
 
       <h2>Documents</h2>
       <table>
