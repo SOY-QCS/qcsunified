@@ -448,3 +448,11 @@ enabled = true
 # Supabase Auth calls this hook directly (no user login), so it checks its own signature instead of a JWT.
 [functions.send-sms-hook]
 verify_jwt = false
+
+# Meta calls this with its own signature (checked inside the function), not a Supabase login.
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+# Called by the dispatch schedule with a shared secret header.
+[functions.dispatch-rank]
+verify_jwt = false

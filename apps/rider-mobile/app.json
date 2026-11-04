@@ -32,6 +32,21 @@
           "cameraPermission": "QCS Rider uses your camera to photograph your documents, your vehicle and parcels.",
           "photosPermission": "QCS Rider needs your photos to upload your documents."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "QCS Rider shares your location while you are online so we can send you nearby jobs and show customers where their parcel is.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "QCS Rider uses the camera to scan parcel labels and photograph deliveries."
+        }
       ]
     ]
   }

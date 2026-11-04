@@ -5,6 +5,8 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors } from "@qcs/ui";
 import { AuthProvider, placeFor, useAuth } from "../lib/auth";
+import "../lib/location";   // registers the background location task at start-up
+import "../lib/queue";      // starts the offline queue retry loop
 
 function Gate() {
   const { ready, session, account } = useAuth();
@@ -15,8 +17,11 @@ function Gate() {
     if (!ready) return;
     if (!session) { if (segments[0] !== "(auth)") router.replace("/login"); return; }
     if (!account) return;
-    const target = `/${placeFor(account)}` as const;
-    if (segments[segments.length - 1] !== target.slice(1)) router.replace(target);
+    const place = placeFor(account);
+    const here = segments[segments.length - 1];
+    // active riders may move between home, job and deliver; everyone else stays on their one screen
+    const allowed = place === "home" ? ["home", "job", "deliver"] : [place];
+    if (!allowed.includes(here as string)) router.replace(`/${place}`);
   }, [ready, session, account, segments, router]);
 
   if (!ready) {

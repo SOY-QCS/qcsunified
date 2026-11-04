@@ -50,7 +50,7 @@ export interface NavItem { href: string; label: string; roles: AppRole[] | null;
 export const OPS_NAV: NavItem[] = [
   { href: "/",                    label: "Overview",          roles: null, ready: true },
   { href: "/orders",              label: "Orders",            roles: ["super_admin", "city_admin", "dispatcher", "support", "analyst", "hub_manager"], ready: false },
-  { href: "/dispatch",            label: "Dispatch",          roles: ["super_admin", "city_admin", "dispatcher"], ready: false },
+  { href: "/dispatch",            label: "Dispatch",          roles: ["super_admin", "city_admin", "dispatcher", "support"], ready: true },
   { href: "/riders/applications", label: "Rider applications", roles: ["super_admin", "city_admin"], ready: true },
   { href: "/riders",              label: "Riders",            roles: ["super_admin", "city_admin", "dispatcher", "analyst"], ready: false },
   { href: "/hubs",                label: "Hubs",              roles: ["super_admin", "city_admin", "hub_manager", "analyst"], ready: false },

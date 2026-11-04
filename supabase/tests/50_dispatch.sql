@@ -255,6 +255,15 @@ select tests.ok(whatsapp_rider_command('233200000401', '  delivered   ' || lower
 select tests.ok((select status = 'DELIVERED' and pod_method = 'whatsapp' and pod_flagged like '%no signature%' from orders where id = (select oid from j4)), 'WhatsApp delivery is flagged for review (no signature)');
 select tests.ok(whatsapp_rider_command('233200000401', 'DELIVERED ' || (select tn from tn4) || ' ' || (select c from tn4)) like '%already delivered%', 'sending it again is harmless');
 
+select tests.login('00000000-0000-0000-0000-000000000401');
+select tests.expect_error($q$select review_pod_flag((select oid from j4), 'looks fine')$q$, 'Only dispatch', 'a rider cannot clear their own delivery flag');
+select tests.login('00000000-0000-0000-0000-000000000412');
+select tests.expect_error($q$select review_pod_flag((select oid from j4), 'ok')$q$, 'short note', 'reviewing needs a note');
+select review_pod_flag((select oid from j4), 'Called recipient, parcel received');
+select tests.service();
+select tests.ok((select pod_flagged is null and pod_reviewed_by = '00000000-0000-0000-0000-000000000412' from orders where id = (select oid from j4)), 'dispatcher review clears the flag');
+select tests.ok(exists(select 1 from audit_log where reason like 'delivery reviewed:%'), 'the review is in the audit log');
 select tests.logout();
 select tests.ok((select count(*) from job_offers where status = 'offered' and rider_id = '00000000-0000-0000-0000-000000000402') <= 1, 'never more than one live offer per rider');
 rollback;
+

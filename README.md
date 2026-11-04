@@ -164,3 +164,59 @@ A scheduled job (`/api/v1/payments/reconcile`, every 5 minutes) catches payments
 **Testing without Hubtel:** set `DEV_FAKE_PAYMENTS=1` (local only) — checkout opens a test page with "Pay" / "Decline" buttons.
 
 **Tests:** `pnpm db:test` (227 checks incl. 50+ money checks), `pnpm test` (Hubtel client 13, callback handling 7, statements 3, …).
+
+## Phase 5 — Dispatch and the rider app
+
+**How a job finds a rider.** When an Express order is confirmed, the database makes a trip and starts
+dispatch. Every 5 seconds a scheduled database job (`dispatch_tick`) offers waiting jobs to the
+nearest free, online, eligible rider (right city, vehicle, weight, cash-float limit, documents valid).
+The rider has 20 seconds. Reject or no answer → next nearest rider, and it counts against the rider's
+score. After 5 misses (about 2 minutes) the job appears on **Ops dashboard → Dispatch** under
+"Needs a dispatcher", where it can be assigned by hand or offered again. A rider can only hold one job.
+
+**Rider app.** Go online (location sharing starts, with the "QCS is tracking your trip" notification) →
+job card with a countdown → Accept → Navigate (opens Google Maps) → Arrived → confirm/scan each
+parcel → Picked up → drop-offs listed nearest first (the rider can tap any) → at the door: 4-digit
+code, signature, photo (if the vendor asked for one), cash collection for COD → Delivered.
+"Delivery failed" asks for a reason. If the recipient has no code, the rider takes a photo and asks
+for an override, which Dispatch or Support approve on the Dispatch page. With no signal, every step
+is saved on the phone and sent automatically later, with the time it really happened.
+
+**WhatsApp backup.** A rider with no data can WhatsApp `DELIVERED ACC-202611041301-KUM 1234` to the
+QCS number. It only works from the rider's registered phone, for a parcel on their own job, with the
+right code. Because there's no signature, these deliveries show on the Dispatch page under
+"Deliveries to check" until someone confirms them.
+
+### Try it locally
+```bash
+pnpm --filter @qcs/rider-mobile start     # Expo Go works for screens; background location needs a dev build
+pnpm --filter @qcs/ops-dashboard dev      # http://localhost:3000/dispatch
+```
+Background location and the foreground notification need a development build
+(`eas build --profile development --platform android`); Expo Go can't run them.
+
+### Going live
+1. **Scheduler.** `dispatch_tick` is scheduled by the migration with pg_cron (Supabase → Integrations → Cron must be on).
+2. **WhatsApp webhook.** `supabase functions deploy whatsapp-webhook`, set the `WHATSAPP_*` secrets
+   (see `.env.example`), then in Meta → WhatsApp → Configuration set the callback URL to
+   `https://<project>.supabase.co/functions/v1/whatsapp-webhook`, the verify token, and subscribe to `messages`.
+3. **Optional Google road-time ranking** (off by default; costs about one Routes API call per job):
+   deploy `dispatch-rank`, set `GOOGLE_MAPS_SERVER_KEY` and `DISPATCH_RANK_SECRET`, then in the SQL editor:
+   ```sql
+   select vault.create_secret('<DISPATCH_RANK_SECRET>', 'dispatch_rank_secret');
+   select cron.schedule('dispatch-rank', '5 seconds', $$
+     select net.http_post('https://<project>.supabase.co/functions/v1/dispatch-rank',
+       headers := jsonb_build_object('x-qcs-secret',
+         (select decrypted_secret from vault.decrypted_secrets where name = 'dispatch_rank_secret')))
+     where exists (select 1 from public.trips_to_rank())$$);
+   update public.app_settings set value = 'true' where key = 'dispatch_google_ranking' and city_id is null;
+   ```
+   If Google is slow or down, dispatch waits at most 4 seconds and then uses straight-line distance.
+4. **App stores.** Google Play and Apple ask why the app uses background location. Suggested text:
+   "QCS Rider shares the rider's location only while they are online or on a delivery, so we can send
+   them nearby jobs and show customers where their parcel is. Tracking stops when they go offline."
+
+### Tests
+`supabase/tests/50_dispatch.sql` (nearest rider, cascade, escalation, one-job rule, codes, COD,
+offline replay, WhatsApp, overrides), `packages/types/src/rider.test.ts` (stop ordering, offline
+queue) and `supabase/functions/tests/` (WhatsApp signature check, Google ranking).
