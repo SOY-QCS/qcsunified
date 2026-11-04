@@ -45,3 +45,13 @@ Corporate invoicing rules:
 - Corporate accounts are invoiced monthly.
 - An automatic reminder (email + SMS/WhatsApp) is sent 7 days after an invoice is issued if it is still unpaid.
 - Credit limit: unpaid invoices may not exceed 2 months. If an account has unpaid invoices older than 2 months, new bookings are blocked until it pays (Finance can override; every override is written to the audit log).
+
+### 5. Service types & pricing (all values editable in admin, per city/zone)
+- EXPRESS (on-demand, same-day): price = base fee + (per-km × distance) + (per-minute × est. duration) + surcharges (weight band, fragile, night, surge). Bike-only. 15 kg hard cap for Express Bulk. The client can update their trip after the rider has started it; the cost of the change is added to the original price and paid on delivery.
+- E-COMMERCE / BULK: priced per weight band per destination zone. A vendor can put up to 25 orders in one trip, and each successful delivery is billed at a flat rate.
+- INTER-CITY: priced by origin hub → destination hub lane + weight band; options: hub-to-hub pickup, or doorstep delivery at destination.
+- SCHEDULED / NEXT-DAY: book a future pickup slot; configurable same-day cut-off time per city (e.g. book before 9:00am for same-day).
+- FLAT-RATE PROMOS: admin can create a flat fee for a zone and date range (e.g. GHS 25 anywhere in Accra).
+- Cash on Delivery (COD): rider collects item value; platform tracks it to settlement.
+- Who pays: sender, recipient, or vendor wallet.
+The pricing engine lives in `packages/pricing` and is the ONLY place prices are calculated. Always show the client an estimated quote before they confirm.
