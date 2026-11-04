@@ -140,3 +140,8 @@ Hub & inter-city details (confirmed):
 - Support tickets linked to orders, with SLA timers, assignment, internal notes, canned replies; tickets can be opened from the client app, WhatsApp or by support staff.
 - Segments + broadcast campaigns (SMS/WhatsApp/push) to vendor or customer groups.
 - Churn alerts: vendor whose weekly volume drops > X%.
+
+CRM details (confirmed, all editable in admin):
+- Churn alert: flag a vendor when this week's volume is 30% or more below their 4-week average.
+- Support SLA: first reply within 1 hour, resolved within 24 hours (working hours). Tickets about COD money or lost/damaged parcels are top priority.
+- Broadcasts: marketing messages only go to users who opted in (tick box at sign-up); every message has an unsubscribe option. WhatsApp marketing uses Meta-approved templates.
