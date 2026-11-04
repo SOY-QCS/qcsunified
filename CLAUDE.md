@@ -16,3 +16,15 @@ It is QCS's own operations platform (not SaaS). QCS fleet riders AND independent
 3. Operations dashboard (Next.js web app, responsive so it works on mobile browsers; installable as a PWA). Theme colour #df6518 (QCS orange).
 4. Client web portal (Next.js) — vendors book, bulk-upload, track and see statements from a laptop.
 5. Public website + tracking page (Next.js): track by tracking number, rate calculator, hub/station pages, rider sign-up.
+
+### 3. Tech stack (fixed — do not change)
+- Monorepo: Turborepo + pnpm. Shared packages: `ui`, `types`, `api-client`, `pricing`, `config`.
+- Backend: Supabase (Postgres + PostGIS, Auth, Realtime, Storage, Edge Functions). Row Level Security ON for every table.
+- Background jobs: Supabase pg_cron + Edge Functions first; only add a queue (Upstash/BullMQ) if a phase genuinely needs it.
+- Maps: Google Maps Platform (Places autocomplete, Distance Matrix, Directions). Also accept Ghana Post GPS digital addresses (e.g. GA-123-4567).
+- Payments: Hubtel ONLY — card, MTN MoMo, Telecel Cash, AirtelTigo Money for collections; Hubtel disbursement for rider and vendor payouts; Hubtel SMS for OTPs and notifications.
+- Push: Expo Notifications (FCM/APNs).
+- Messaging: WhatsApp Cloud API (Meta) for notifications and rider status backup.
+- Email: Resend.
+- Hosting: Vercel (web), EAS Build/Submit (mobile), Supabase cloud.
+- Language: TypeScript everywhere. Validation with Zod. Tests with Vitest + Playwright (web) + Maestro (mobile smoke tests).
