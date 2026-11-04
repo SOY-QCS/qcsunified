@@ -14,8 +14,13 @@ export interface QuoteDeps {
   rulesFor: (cityId: string) => Promise<PricingRuleRow[]>;
   cityCutoff: (cityId: string) => Promise<string>;
   setting: (key: string, cityId: string) => Promise<unknown>;
-  promo: (code: string, cityId: string, service: "express" | "ecommerce") => Promise<PromoCode>;
+  promo: (code: string, cityId: string, service: "express" | "ecommerce" | "intercity") => Promise<PromoCode>;
   route: typeof roadRoute;
+  /** nearest active hub in a city to a point (inter-city), and one hub by id (fulfilment) */
+  hubNear: (cityId: string, p: LatLng) => Promise<{ id: string } | null>;
+  hub: (id: string) => Promise<{ id: string; city_id: string; lat: number; lng: number; name: string; address: string; phone: string | null } | null>;
+  /** units available (on hand − reserved) per SKU for a vendor at a hub */
+  stock: (vendorId: string, hubId: string) => Promise<Record<string, number>>;
   saveQuote: (q: { user_id: string; vendor_id: string | null; service_type: string; city_id: string; request: unknown; price: unknown; zones: (string | null)[]; promo_code_id: string | null; total: number }) => Promise<{ id: string; expires_at: string }>;
   now?: Date;
 }
@@ -26,6 +31,18 @@ export async function buildQuote(body: unknown, deps: QuoteDeps) {
   const req = parsed.data;
   if (req.vendor_id && !deps.vendorIds.includes(req.vendor_id)) throw new ApiError(403, "You can't book for that business");
 
+  // Shipping from stock: the hub is the pickup, and every product must be in stock there.
+  if (req.fulfilment_hub_id) {
+    const hub = await deps.hub(req.fulfilment_hub_id);
+    if (!hub) throw new ApiError(400, "That hub doesn't exist");
+    const have = await deps.stock(req.vendor_id!, hub.id);
+    const want: Record<string, number> = {};
+    req.dropoffs.forEach((d) => d.items?.forEach((it) => { want[it.sku_id] = (want[it.sku_id] ?? 0) + it.qty; }));
+    const short = Object.entries(want).filter(([sku, n]) => (have[sku] ?? 0) < n);
+    if (short.length) throw new ApiError(400, "Not enough stock at the hub", short.map(([sku, n]) => `Product ${sku.slice(0, 8)}: need ${n}, ${have[sku] ?? 0} available`));
+    req.pickup = { ...req.pickup, lat: hub.lat, lng: hub.lng, formatted_address: `${hub.name}, ${hub.address}`, contact_name: hub.name, contact_phone: hub.phone ?? req.pickup.contact_phone, address_id: null };
+  }
+
   const pickupZone = await deps.zoneFor(req.pickup);
   if (!pickupZone) throw new ApiError(400, "We don't pick up from that area yet", ["Pickup: outside our service areas"]);
   const cityId = pickupZone.city_id;
@@ -34,9 +51,16 @@ export async function buildQuote(body: unknown, deps: QuoteDeps) {
   const problems: string[] = [];
   zones.forEach((z, i) => {
     if (!z) problems.push(`Drop-off ${i + 1}: outside our delivery areas`);
-    else if (z.city_id !== cityId) problems.push(`Drop-off ${i + 1}: in another city — inter-city booking is coming soon`);
+    else if (req.service === "intercity" && z.city_id === cityId) problems.push(`Drop-off ${i + 1}: same city as the pickup — use Express or e-commerce`);
+    else if (req.service !== "intercity" && z.city_id !== cityId) problems.push(`Drop-off ${i + 1}: in another city — choose inter-city`);
   });
   if (problems.length) throw new ApiError(400, "Some drop-offs can't be delivered", problems);
+
+  // Inter-city: the parcel goes pickup → nearest hub in this city → bus → nearest hub in the destination city.
+  const lanes = req.service === "intercity"
+    ? await Promise.all(zones.map(async (z, i) => ({
+        origin: (await deps.hubNear(cityId, req.pickup))?.id, dest: (await deps.hubNear(z!.city_id, req.dropoffs[i]!))?.id })))
+    : [];
 
   const now = deps.now ?? new Date();
   const [rules, cutoff, nightRaw, surgeRaw, rateRaw, minRaw] = await Promise.all([
@@ -58,7 +82,8 @@ export async function buildQuote(body: unknown, deps: QuoteDeps) {
 
   let estimatedRoute = false;
   const stops = await Promise.all(req.dropoffs.map(async (d, i) => {
-    const base = { weightG: d.weight_g, fragile: d.fragile, zoneId: zones[i]!.zone_id, declaredValue: d.item_value, insured: d.insured };
+    const base = { weightG: d.weight_g, fragile: d.fragile, zoneId: zones[i]!.zone_id, declaredValue: d.item_value, insured: d.insured,
+                   ...(req.service === "intercity" ? { originHubId: lanes[i]!.origin, destHubId: lanes[i]!.dest, doorstep: req.intercity_option === "doorstep" } : {}) };
     if (req.service !== "express") return base;
     const r = await deps.route(req.pickup, d);
     estimatedRoute ||= r.estimated;
@@ -76,6 +101,8 @@ export async function buildQuote(body: unknown, deps: QuoteDeps) {
     throw e;
   }
   if (estimatedRoute) price.notes.push("Distance estimated (map service unavailable).");
+  // remember the hubs on each stop so the booking can record the route
+  if (req.service === "intercity") price.stops.forEach((s, i) => Object.assign(s, { originHubId: lanes[i]!.origin, destHubId: lanes[i]!.dest }));
 
   const saved = await deps.saveQuote({
     user_id: deps.userId, vendor_id: req.vendor_id ?? null, service_type: req.service, city_id: cityId,
@@ -106,6 +133,18 @@ export function liveDeps(service: SupabaseClient, userId: string, vendorIds: str
       const { data, error } = await service.rpc("check_promo", { p_code: code, p_user: userId, p_service: svc, p_city: cityId });
       if (error) throw new Error(error.message);
       return { id: data.id, kind: data.kind, value: data.value, maxDiscount: data.max_discount };
+    },
+    hubNear: async (cityId, p) => {
+      const { data } = await service.rpc("nearest_hub", { p_city: cityId, p_lng: p.lng, p_lat: p.lat });
+      return data ? { id: data as string } : null;
+    },
+    hub: async (id) => {
+      const { data } = await service.rpc("hub_point", { p_hub: id });
+      return (data as Awaited<ReturnType<QuoteDeps["hub"]>>) ?? null;
+    },
+    stock: async (vendorId, hubId) => {
+      const { data } = await service.from("stock_levels").select("sku_id, available").eq("vendor_id", vendorId).eq("hub_id", hubId);
+      return Object.fromEntries((data ?? []).map((r) => [r.sku_id, r.available]));
     },
     saveQuote: async (q) => {
       const { data, error } = await service.from("quotes").insert(q).select("id, expires_at").single();

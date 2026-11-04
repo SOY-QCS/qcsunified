@@ -26,8 +26,13 @@ export default function JobScreen() {
   useEffect(() => { if (!loading && !job) router.replace("/home"); }, [loading, job, router]);
 
   const orders = job?.orders ?? [];
+  const firstMile = job?.trip.trip_type === "intercity_first_mile";
+  // last mile: parcels still in the hub, waiting for hub staff to scan them over to me
+  const atHub = orders.filter((o) => ["ARRIVED_DEST_HUB", "AT_HUB"].includes(o.status) && job?.trip.trip_type === "intercity_last_mile");
   const atPickup = orders.filter((o) => ["ASSIGNED", "RIDER_AT_PICKUP"].includes(o.status));
-  const route = useMemo(() => suggestedRoute(orders.filter((o) => !["ASSIGNED", "RIDER_AT_PICKUP"].includes(o.status))
+  // first mile: once collected, the parcels go to the hub, not to the recipients
+  const toHub = firstMile ? orders.filter((o) => ["PICKED_UP", "IN_TRANSIT"].includes(o.status)) : [];
+  const route = useMemo(() => suggestedRoute(orders.filter((o) => !["ASSIGNED", "RIDER_AT_PICKUP", "ARRIVED_DEST_HUB", "AT_HUB"].includes(o.status) && !(firstMile && ["PICKED_UP", "IN_TRANSIT"].includes(o.status)))
     .map((o) => ({ ...o, lat: o.dropoff_lat, lng: o.dropoff_lng })), pos), [orders, pos]);
 
   // Update the screen immediately; the queue sends it when there's signal.
@@ -62,7 +67,22 @@ export default function JobScreen() {
       <Title sub={`${orders.length} parcel${orders.length > 1 ? "s" : ""} · ${job.trip.trip_type}`}>Current job</Title>
       <Banner text={msg?.text ?? null} kind={msg?.kind} />
 
-      {atPickup.length > 0 ? (
+      {atHub.length > 0 && job?.hub ? (
+        <View style={{ backgroundColor: "#fff", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: "#e6e1da" }}>
+          <Text style={{ fontSize: 18, fontWeight: "800" }}>Collect at {job.hub.name}</Text>
+          <Text style={{ color: colors.muted }}>{job.hub.address}</Text>
+          <Text style={{ marginVertical: 8 }}>Show this screen to the hub staff. They scan each parcel over to you: {atHub.map((o) => o.tracking_number).join(", ")}</Text>
+          <Button title="Navigate to hub" kind="secondary" onPress={() => Linking.openURL(navigationUrl({ lat: job.hub!.lat, lng: job.hub!.lng }))} />
+        </View>
+      ) : toHub.length > 0 && job?.hub ? (
+        <View style={{ backgroundColor: "#fff", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: colors.primary }}>
+          <Text style={{ fontSize: 18, fontWeight: "800" }}>Take {toHub.length} parcel(s) to {job.hub.name}</Text>
+          <Text style={{ color: colors.muted }}>{job.hub.address}{job.hub.phone ? ` · ${job.hub.phone}` : ""}</Text>
+          <Text style={{ marginVertical: 8 }}>Inter-city parcels: hand them to the hub staff, who scan them in. Your job ends when all are scanned.</Text>
+          {toHub.map((o) => <Text key={o.id}>• {o.tracking_number}</Text>)}
+          <Button title="Navigate to hub" onPress={() => Linking.openURL(navigationUrl({ lat: job.hub!.lat, lng: job.hub!.lng }))} />
+        </View>
+      ) : atPickup.length > 0 ? (
         <View style={{ backgroundColor: "#fff", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: "#e6e1da" }}>
           <Text style={{ fontSize: 18, fontWeight: "800" }}>1. Pickup</Text>
           <Text style={{ fontWeight: "700", marginTop: 6 }}>{first.pickup_address}</Text>

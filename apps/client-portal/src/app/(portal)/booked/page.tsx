@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
-import { ghs } from "@/components/api";
+import { ghs } from "@/lib/money";
 import { PayButton } from "@/components/pay-button";
 
 const STATUS: Record<string, string> = { PENDING_PAYMENT: "Waiting for payment", CONFIRMED: "Booked — finding a rider", DRAFT: "Draft" };

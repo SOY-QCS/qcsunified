@@ -6,17 +6,23 @@ import { AddressField, emptyPlace, type PlaceValue } from "./address-field";
 import { api, ApiProblem, ghs, type BookingResult, type QuoteResult } from "./api";
 
 export interface Party { name: string; phone: string }
-interface Stop { place: PlaceValue; recipient: Party; weightKg: string; size: string; fragile: boolean; item: string; valueGhs: string; insured: boolean; codGhs: string; instructions: string; ref: string }
-const newStop = (): Stop => ({ place: emptyPlace(), recipient: { name: "", phone: "" }, weightKg: "1", size: "small", fragile: false, item: "", valueGhs: "", insured: false, codGhs: "", instructions: "", ref: "" });
+interface Stop { place: PlaceValue; recipient: Party; weightKg: string; size: string; fragile: boolean; item: string; valueGhs: string; insured: boolean; codGhs: string; instructions: string; ref: string;
+  items: { sku_id: string; qty: number }[] }
+const newStop = (): Stop => ({ place: emptyPlace(), recipient: { name: "", phone: "" }, weightKg: "1", size: "small", fragile: false, item: "", valueGhs: "", insured: false, codGhs: "", instructions: "", ref: "", items: [] });
+/** Products the vendor has at each hub (for "send from my stock"). */
+export interface StockInfo { hub_id: string; hub_name: string; sku_id: string; sku: string; name: string; available: number }
 const p = (ghsText: string) => Math.round(Number(ghsText || 0) * 100);
 
 export interface VendorInfo { id: string; name: string; accountType: string; pickup: PlaceValue & { contact_name: string; contact_phone: string } | null }
 export interface InsuranceInfo { rate: number; threshold: number }
 
 /** One form for Express (1 drop-off) and e-commerce trips (up to 25 drop-offs). */
-export function BookingForm({ vendor, me, insurance }: { vendor: VendorInfo; me: Party; insurance: InsuranceInfo }) {
+export function BookingForm({ vendor, me, insurance, stock = [] }: { vendor: VendorInfo; me: Party; insurance: InsuranceInfo; stock?: StockInfo[] }) {
   const router = useRouter();
-  const [service, setService] = useState<"ecommerce" | "express">("ecommerce");
+  const [service, setService] = useState<"ecommerce" | "express" | "intercity">("ecommerce");
+  const [icOption, setIcOption] = useState<"doorstep" | "hub_collection">("doorstep");
+  const stockHubs = [...new Map(stock.map((x) => [x.hub_id, x.hub_name])).entries()];
+  const [fromHub, setFromHub] = useState<string>("");   // "" = normal pickup
   const [pickup, setPickup] = useState<PlaceValue>(vendor.pickup ?? emptyPlace());
   const [sender, setSender] = useState<Party>({ name: vendor.pickup?.contact_name || me.name, phone: vendor.pickup?.contact_phone || me.phone });
   const [pickupNote, setPickupNote] = useState("");
@@ -35,7 +41,8 @@ export function BookingForm({ vendor, me, insurance }: { vendor: VendorInfo; me:
 
   function request() {
     const local: string[] = [];
-    if (pickup.lat == null) local.push("Pickup: set the pin (search, saved address or your location)");
+    if (!fromHub && pickup.lat == null) local.push("Pickup: set the pin (search, saved address or your location)");
+    if (fromHub) stops.forEach((s2, i) => { if (!s2.items.length) local.push(`Drop-off ${i + 1}: choose the products to send`); });
     stops.forEach((s, i) => {
       if (s.place.lat == null) local.push(`Drop-off ${i + 1}: set the pin`);
       if (!normalizeGhanaPhone(s.recipient.phone)) local.push(`Drop-off ${i + 1}: enter the recipient's Ghana phone number`);
@@ -44,12 +51,16 @@ export function BookingForm({ vendor, me, insurance }: { vendor: VendorInfo; me:
     const payment_method = payer === "vendor_wallet" ? "wallet" : payer === "corporate_invoice" ? "invoice" : method;
     return {
       service, vendor_id: vendor.id, payer, payment_method, promo_code: promo || null,
+      intercity_option: service === "intercity" ? icOption : null, fulfilment_hub_id: fromHub || null,
       scheduled_at: when ? new Date(when).toISOString() : null,
-      pickup: { ...pickup, contact_name: sender.name, contact_phone: sender.phone, instructions: pickupNote || null },
+      // from stock, the server replaces the pickup with the hub; a placeholder keeps the request valid
+      pickup: fromHub ? { formatted_address: "QCS hub", lat: 5.6, lng: -0.2, contact_name: sender.name, contact_phone: sender.phone }
+                      : { ...pickup, contact_name: sender.name, contact_phone: sender.phone, instructions: pickupNote || null },
       dropoffs: stops.map((s) => ({
         ...s.place, contact_name: s.recipient.name, contact_phone: s.recipient.phone, instructions: s.instructions || null,
         weight_g: Math.round(Number(s.weightKg || 0) * 1000), size: s.size, fragile: s.fragile, item_description: s.item || null,
         item_value: p(s.valueGhs), insured: s.insured && p(s.valueGhs) >= insurance.threshold, cod_amount: p(s.codGhs), external_ref: s.ref || null,
+        items: fromHub ? s.items.filter((it) => it.qty > 0) : null,
       })),
     };
   }
@@ -81,12 +92,26 @@ export function BookingForm({ vendor, me, insurance }: { vendor: VendorInfo; me:
         <strong>Service</strong>
         <div className="tabs" style={{ marginTop: 8 }}>
           <button type="button" aria-pressed={service === "ecommerce"} onClick={() => { setService("ecommerce"); setQuote(null); }}>E-commerce trip (1–25 drop-offs)</button>
-          <button type="button" aria-pressed={service === "express"} onClick={() => { setService("express"); setStops(stops.slice(0, 1)); setQuote(null); }}>Express (now, 1 drop-off, ≤15 kg)</button>
+          <button type="button" aria-pressed={service === "express"} onClick={() => { setService("express"); setFromHub(""); setStops(stops.slice(0, 1)); setQuote(null); }}>Express (now, 1 drop-off, ≤15 kg)</button>
+          <button type="button" aria-pressed={service === "intercity"} onClick={() => { setService("intercity"); setQuote(null); }}>Inter-city (by bus to another city)</button>
         </div>
-        <p className="muted">{service === "ecommerce" ? "Priced per drop-off by zone and weight. You pay per successful delivery." : "Bike picks up now. Price by distance and time, locked when you confirm."}</p>
+        <p className="muted">{service === "ecommerce" ? "Priced per drop-off by zone and weight. You pay per successful delivery."
+          : service === "express" ? "Bike picks up now. Price by distance and time, locked when you confirm."
+          : "We pick up, take it to our hub, send it by bus to the hub in the other city. Priced by route and weight."}</p>
+        {service === "intercity" && <div className="tabs">
+          <button type="button" aria-pressed={icOption === "doorstep"} onClick={() => { setIcOption("doorstep"); setQuote(null); }}>Deliver to the door</button>
+          <button type="button" aria-pressed={icOption === "hub_collection"} onClick={() => { setIcOption("hub_collection"); setQuote(null); }}>Recipient collects at our hub (cheaper)</button>
+        </div>}
+        {stockHubs.length > 0 && service !== "express" && <>
+          <label>Send from</label>
+          <select value={fromHub} onChange={(e) => { setFromHub(e.target.value); setStops(stops.map((x) => ({ ...x, items: [] }))); setQuote(null); }}>
+            <option value="">My pickup address</option>
+            {stockHubs.map(([id, name]) => <option key={id} value={id}>My stock at {name}</option>)}
+          </select>
+        </>}
       </div>
 
-      <div className="card">
+      {!fromHub && <div className="card">
         <strong>Pickup</strong>
         <AddressField label="Pickup address" value={pickup} onChange={(v) => { setPickup(v); setQuote(null); }} vendorId={vendor.id} />
         <div className="row">
@@ -97,7 +122,8 @@ export function BookingForm({ vendor, me, insurance }: { vendor: VendorInfo; me:
         <label>Pickup time</label>
         <input type="datetime-local" value={when} onChange={(e) => { setWhen(e.target.value); setQuote(null); }} />
         <p className="muted">Leave empty for {service === "express" ? "now" : "the next pickup run (same day if before the cut-off)"}.</p>
-      </div>
+      </div>}
+      {fromHub && <p className="notice" style={{ color: "var(--text)" }}>QCS picks and packs the products at {stockHubs.find(([id]) => id === fromHub)?.[1]} (pick &amp; pack fee per order), then delivers them.</p>}
 
       {stops.map((s, i) => (
         <div className="card stop" key={i}>
@@ -128,6 +154,18 @@ export function BookingForm({ vendor, me, insurance }: { vendor: VendorInfo; me:
               <label style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 600 }}><input type="checkbox" style={{ width: "auto" }} checked={s.insured} onChange={(e) => setStop(i, { insured: e.target.checked })} /> Yes, insure this parcel</label>
             </div>
           )}
+          {fromHub && <div>
+            <label>Products to send</label>
+            {stock.filter((x) => x.hub_id === fromHub).map((x) => {
+              const cur = s.items.find((it) => it.sku_id === x.sku_id)?.qty ?? 0;
+              return <div key={x.sku_id} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
+                <input type="number" min={0} max={x.available} value={cur || ""} placeholder="0" style={{ width: 80 }}
+                  onChange={(e) => { const q = Math.max(0, Math.min(x.available, Number(e.target.value) || 0));
+                    setStop(i, { items: [...s.items.filter((it) => it.sku_id !== x.sku_id), ...(q ? [{ sku_id: x.sku_id, qty: q }] : [])] }); }} />
+                <span>{x.name} <span className="muted">({x.sku} · {x.available} available)</span></span>
+              </div>;
+            })}
+          </div>}
           <label>Delivery instructions</label><input value={s.instructions} onChange={(e) => setStop(i, { instructions: e.target.value })} placeholder="e.g. Call on arrival, blue gate" />
           <label style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={s.fragile} onChange={(e) => setStop(i, { fragile: e.target.checked })} /> Fragile — handle with care</label>
         </div>

@@ -1,4 +1,4 @@
-import { ghs } from "@/components/api";
+import { ghs } from "@/lib/money";
 import { supabaseServer } from "@/lib/supabase/server";
 import { currentVendor } from "../vendor";
 

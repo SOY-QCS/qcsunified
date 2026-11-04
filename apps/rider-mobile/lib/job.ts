@@ -9,7 +9,9 @@ export interface JobOrder {
   dropoff_lat: number; dropoff_lng: number; weight_g: number; fragile: boolean; cod_amount: number;
   pod_photo_required: boolean; pickup_code_required: boolean; otp_verified: boolean; signature: boolean; photo: boolean; cod_collected: boolean;
 }
-export interface Job { trip: { id: string; status: string; trip_type: string }; orders: JobOrder[] }
+export interface Job { trip: { id: string; status: string; trip_type: string }; orders: JobOrder[];
+  /** inter-city: the hub to take parcels to (first mile) or collect them from (last mile) */
+  hub?: { id: string; name: string; address: string; phone: string | null; lat: number; lng: number } | null }
 
 /** The offer waiting for me: instant through Realtime, with a 5-second check as a safety net. */
 export function useOffer(riderId: string, online: boolean) {

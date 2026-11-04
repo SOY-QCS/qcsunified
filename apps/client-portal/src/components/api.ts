@@ -16,4 +16,4 @@ export interface QuoteResult {
 }
 export interface BookingResult { trip_id: string | null; needs_payment: boolean; total: number; orders: { id: string; tracking_number: string; status: string; fee: number }[] }
 
-export const ghs = (p: number) => `GHS ${(p / 100).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export { ghs } from "@/lib/money";

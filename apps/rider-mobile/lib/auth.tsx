@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 /** Which part of the rider app this person should see. */
 export type RiderPlace = "apply" | "pending" | "home" | "hub" | "blocked";
 export function placeFor(a: Account): RiderPlace {
-  const isHub = a.roles.some((r) => r.role === "hub_handler");
+  const isHub = a.roles.some((r) => r.role === "hub_handler" || r.role === "hub_manager");
   if (isHub && !a.rider) return "hub";               // hub handlers only see Hub mode (CLAUDE.md §4)
   const status = a.rider?.status;
   if (!status || status === "applicant" || status === "rejected") return "apply";

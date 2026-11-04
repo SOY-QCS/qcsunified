@@ -8,9 +8,10 @@ const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const head = b64({ alg: "HS256", typ: "JWT" }), body = b64({ role: "service_role", exp: 4102444800 });
 const jwt = `${head}.${body}.${crypto.createHmac("sha256", process.env.JWT_SECRET).update(`${head}.${body}`).digest("base64url")}`;
 let bad = 0, n = 0;
-for (const f of files) for (const m of fs.readFileSync(f, "utf8").matchAll(/\.from\("([a-z_]+)"\)\s*\.select\("([^"]+)"/g)) {
+for (const f of files) for (const m of fs.readFileSync(f, "utf8").matchAll(/\.from\("([a-z_]+)"\)\s*\.select\((?:"([^"]+)"|`([^`$]+)`)/g)) {
   n++;
-  const r = await fetch(`http://localhost:3901/${m[1]}?limit=1&select=${encodeURIComponent(m[2].replace(/\s+/g, ""))}`, { headers: { Authorization: `Bearer ${jwt}` } });
+  const cols = (m[2] ?? m[3]).replace(/\s+/g, "");
+  const r = await fetch(`http://localhost:3901/${m[1]}?limit=1&select=${encodeURIComponent(cols)}`, { headers: { Authorization: `Bearer ${jwt}` } });
   if (!r.ok) { bad++; console.log(`✗ ${path.relative(root, f)}  ${m[1]}: ${(await r.text()).slice(0, 300)}`); }
 }
 const rows = execSync(`psql "${process.env.DB_URL}" -tAc "select proname || ':' || coalesce(array_to_string(proargnames, ','), '') from pg_proc where pronamespace = 'public'::regnamespace"`).toString().trim().split("\n");

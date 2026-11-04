@@ -43,6 +43,8 @@ export const Dropoff = Place.extend({
   insured: z.boolean().default(false),
   cod_amount: z.number().int().min(0).default(0),
   external_ref: optionalText(80),
+  /** fulfilment: products sent from the vendor's stock at a QCS hub */
+  items: z.array(z.object({ sku_id: z.uuid(), qty: z.number().int().positive().max(1000) })).max(50).optional().nullable(),
 });
 export type Dropoff = z.infer<typeof Dropoff>;
 
@@ -50,7 +52,11 @@ export const PayerOption = z.enum(["sender", "recipient", "vendor_wallet", "corp
 export const PaymentMethodOption = z.enum(["card", "momo", "wallet", "cash", "invoice"]);
 
 export const BookingRequest = z.object({
-  service: z.enum(["express", "ecommerce"]),
+  service: z.enum(["express", "ecommerce", "intercity"]),
+  /** inter-city: recipient collects at the destination hub, or QCS delivers to the door */
+  intercity_option: z.enum(["hub_collection", "doorstep"]).optional().nullable(),
+  /** fulfilment: ship from the vendor's stock at this hub (the hub becomes the pickup) */
+  fulfilment_hub_id: z.uuid().optional().nullable(),
   vendor_id: z.uuid().optional().nullable(),
   scheduled_at: z.iso.datetime().optional().nullable(),
   pickup: Place,
@@ -63,6 +69,12 @@ export const BookingRequest = z.object({
   if (b.service === "express" && b.dropoffs.length !== 1) issue(["dropoffs"], "Express takes one drop-off. Use an e-commerce trip for several.");
   if (b.service === "express") b.dropoffs.forEach((d, i) => { if (d.weight_g > 15_000) issue(["dropoffs", i, "weight_g"], "Express is bike-only: 15 kg maximum"); });
   if (b.service === "ecommerce" && !b.vendor_id) issue(["service"], "E-commerce trips are for business accounts");
+  if (b.service === "intercity" && !b.intercity_option) issue(["intercity_option"], "Choose hub collection or doorstep delivery");
+  if (b.fulfilment_hub_id) {
+    if (!b.vendor_id) issue(["fulfilment_hub_id"], "Shipping from stock is for business accounts");
+    if (b.service === "express") issue(["service"], "Stock shipments go as e-commerce or inter-city");
+    b.dropoffs.forEach((d, i) => { if (!d.items?.length) issue(["dropoffs", i, "items"], "Choose the products to send"); });
+  } else b.dropoffs.forEach((d, i) => { if (d.items?.length) issue(["dropoffs", i, "items"], "Products can only be sent from stock at a hub"); });
   if (!b.vendor_id) b.dropoffs.forEach((d, i) => { if (d.cod_amount > 0) issue(["dropoffs", i, "cod_amount"], "Cash on Delivery is for business accounts"); });
   b.dropoffs.forEach((d, i) => { if (d.cod_amount > 0 && b.payer === "recipient") issue(["payer"], "With Cash on Delivery the delivery fee is billed to the business, not the recipient"); void i; });
   const ok: Record<string, string[]> = {

@@ -3,8 +3,8 @@
  * Inputs are already-validated booking details plus the facts the server looked up
  * (rules, zones, road distance). Pure: same inputs always give the same price.
  */
-import { applyFlatPromo, insurancePremium, promoDiscount, quoteEcommerceStop, quoteExpress, PricingError, type QuoteLine } from "./engine";
-import { expressRuleFor, flatPromoFor, zoneBandsFor } from "./select";
+import { applyFlatPromo, insurancePremium, promoDiscount, quoteEcommerceStop, quoteExpress, quoteIntercity, PricingError, type QuoteLine } from "./engine";
+import { expressRuleFor, flatPromoFor, laneFor, zoneBandsFor } from "./select";
 import { deliveryDay, isNight } from "./time";
 import type { NightWindow, PricingRuleRow, PromoCode } from "./rules";
 
@@ -12,13 +12,15 @@ export const MAX_BULK_STOPS = 25;
 
 export interface StopInput {
   weightG: number; fragile: boolean; zoneId: string | null; distanceM?: number; durationS?: number;
+  /** inter-city only: the hubs the parcel travels between, and whether it is delivered to the door at the end */
+  originHubId?: string; destHubId?: string; doorstep?: boolean;
   declaredValue?: number;   // pesewas
   insured?: boolean;
 }
 /** Insurance settings (admin-editable): offered from `minValue` declared, premium = rate × declared value. */
 export interface InsuranceSettings { rate: number; minValue: number }
 export interface PriceBookingInput {
-  service: "express" | "ecommerce";
+  service: "express" | "ecommerce" | "intercity";
   cityId: string;
   stops: StopInput[];
   rules: PricingRuleRow[];
@@ -66,6 +68,21 @@ export function priceBooking(input: PriceBookingInput): BookingPrice {
     if (flat) q = applyFlatPromo(q, flat.flatFee, flat.name);
     priced = [{ feePesewas: q.totalPesewas, netPesewas: q.totalPesewas, insurancePesewas: 0, totalPesewas: q.totalPesewas, lines: q.lines }];
     notes.push("Express price is locked now — traffic won't change it.");
+  } else if (service === "intercity") {
+    // hub → hub lane price by weight band, plus the doorstep fee when delivered to the door (CLAUDE.md §5)
+    priced = stops.map((s, i) => {
+      if (!s.originHubId || !s.destHubId) throw new PricingError(`Drop-off ${i + 1}: no QCS hub serves that city yet`);
+      try {
+        const q = quoteIntercity(laneFor(rules, s.originHubId, s.destHubId, now), s.weightG, !!s.doorstep);
+        return { feePesewas: q.totalPesewas, netPesewas: q.totalPesewas, insurancePesewas: 0, totalPesewas: q.totalPesewas, lines: q.lines };
+      } catch (e) {
+        throw new PricingError(`Drop-off ${i + 1}: ${(e as Error).message}`);
+      }
+    });
+    const day = input.pickupAt ? { date: input.pickupAt.toISOString().slice(0, 10), sameDay: true } : deliveryDay(now, input.cutoff);
+    pickupDate = day.date;
+    if (!day.sameDay) notes.push(`Booked after the ${input.cutoff.slice(0, 5)} cut-off, so pickup is on ${day.date}.`);
+    notes.push(stops.some((s) => s.doorstep) ? "Travels by bus between QCS hubs, then delivered to the door." : "Travels by bus between QCS hubs; the recipient collects it at the destination hub with their code.");
   } else {
     priced = stops.map((s, i) => {
       if (!s.zoneId) throw new PricingError(`Drop-off ${i + 1}: we don't deliver to that area yet`);

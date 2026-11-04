@@ -9,6 +9,8 @@ const rules: PricingRuleRow[] = [
     config: { baseFee: 1000, perKm: 300, perMinute: 20, weightSurcharges: [{ maxG: 15000, feePesewas: 0 }], fragileSurcharge: 300, nightSurcharge: 500 } },
   { id: "2", rule_kind: "ecommerce_zone", city_id: ACC, zone_id: "osu", origin_hub_id: null, dest_hub_id: null, valid_from: null, valid_to: null, is_active: true,
     config: { bands: [{ maxG: 5000, feePesewas: 2500 }] } },
+  { id: "3", rule_kind: "intercity_lane", city_id: ACC, zone_id: null, origin_hub_id: "acc-hub", dest_hub_id: "ksi-hub", valid_from: null, valid_to: null, is_active: true,
+    config: { bands: [{ maxG: 5000, feePesewas: 5000 }], doorstepFee: 1500 } },
 ];
 let saved: unknown = null;
 const deps = (o: Partial<QuoteDeps> = {}): QuoteDeps => ({
@@ -18,6 +20,9 @@ const deps = (o: Partial<QuoteDeps> = {}): QuoteDeps => ({
   promo: async () => ({ id: "p1", kind: "fixed", value: 500 }),
   route: async () => ({ distanceM: 10_000, durationS: 1800, estimated: false }),
   saveQuote: async (q) => { saved = q; return { id: "q1", expires_at: "later" }; },
+  hubNear: async (city) => ({ id: city === KSI ? "ksi-hub" : "acc-hub" }),
+  hub: async (id) => (id === "acc-hub" ? { id, city_id: ACC, lat: 5.6, lng: -0.19, name: "Accra Hub", address: "Kaneshie", phone: "0302000000" } : null),
+  stock: async () => ({ "22222222-2222-4222-8222-222222222222": 3 }),
   now: new Date("2026-11-04T08:00:00Z"), ...o,
 });
 const place = { formatted_address: "Oxford St", lat: 5.556, lng: -0.178, contact_name: "Ama", contact_phone: "0241234567" };
@@ -67,5 +72,31 @@ describe("quote", () => {
   it("estimated distance is disclosed", async () => {
     const q = await buildQuote(express, deps({ route: async () => ({ distanceM: 5000, durationS: 900, estimated: true }) }));
     expect(q.notes.join()).toMatch(/estimated/);
+  });
+});
+
+describe("inter-city and shipping from stock", () => {
+  const ksiDrop = { ...drop, lat: 6.69, lng: -1.62 };
+  it("Accra → Kumasi doorstep: lane price + doorstep fee, hubs remembered", async () => {
+    const q = await buildQuote({ service: "intercity", intercity_option: "doorstep", pickup: place, dropoffs: [ksiDrop], payer: "sender", payment_method: "momo" }, deps());
+    expect(q.totalPesewas).toBe(6500);
+    expect((q.stops[0] as unknown as { originHubId: string; destHubId: string })).toMatchObject({ originHubId: "acc-hub", destHubId: "ksi-hub" });
+  });
+  it("inter-city must go to another city", async () => {
+    expect((await fails({ service: "intercity", intercity_option: "doorstep", pickup: place, dropoffs: [drop], payer: "sender", payment_method: "momo" }))?.details?.[0]).toMatch(/same city/);
+  });
+  it("from stock: hub becomes the pickup", async () => {
+    const SKU = "22222222-2222-4222-8222-222222222222";
+    await buildQuote({ service: "ecommerce", vendor_id: V, fulfilment_hub_id: "33333333-3333-4333-8333-333333333333", pickup: place,
+      dropoffs: [{ ...drop, items: [{ sku_id: SKU, qty: 2 }] }], payer: "vendor_wallet", payment_method: "wallet" },
+      deps({ hub: async (id) => ({ id, city_id: ACC, lat: 5.6, lng: -0.19, name: "Accra Hub", address: "Kaneshie", phone: "0302000000" }) }));
+    expect((saved as { request: { pickup: { formatted_address: string } } }).request.pickup.formatted_address).toBe("Accra Hub, Kaneshie");
+  });
+  it("from stock: not enough units", async () => {
+    const SKU = "22222222-2222-4222-8222-222222222222";
+    const e = await fails({ service: "ecommerce", vendor_id: V, fulfilment_hub_id: "33333333-3333-4333-8333-333333333333", pickup: place,
+      dropoffs: [{ ...drop, items: [{ sku_id: SKU, qty: 5 }] }], payer: "vendor_wallet", payment_method: "wallet" },
+      deps({ hub: async (id) => ({ id, city_id: ACC, lat: 5.6, lng: -0.19, name: "Accra Hub", address: "Kaneshie", phone: null }) }));
+    expect(e?.message).toMatch(/Not enough stock/);
   });
 });

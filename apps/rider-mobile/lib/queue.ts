@@ -47,7 +47,9 @@ async function send(item: QueuedAction): Promise<Record<string, unknown>> {
     const { error } = await sb.storage.from("pod").upload(f.path, body, { contentType: f.contentType, upsert: true });
     if (error && !/exists/i.test(error.message)) throw new Error(error.message);
   }
-  const { data, error } = await sb.rpc("rider_action", { p_key: item.key, p_action: item.action, p_occurred_at: item.occurredAt });
+  // rider updates go to rider_action; hub scans (Hub mode) to hub_scan — both ignore repeats of the same key
+  const { rpc = "rider_action", ...action } = item.action as { rpc?: string };
+  const { data, error } = await sb.rpc(rpc, { p_key: item.key, p_action: action, p_occurred_at: item.occurredAt });
   if (error) throw new Error(error.message);
   return data as Record<string, unknown>;
 }

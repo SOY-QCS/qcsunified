@@ -27,7 +27,7 @@ export function HubEditor({ hubs, cities, editable, defaultCity }: { hubs: Hub[]
         <tbody>
           {hubs.map((h) => (
             <tr key={h.id}>
-              <td><strong>{h.name}</strong> <span className="muted">{h.code}</span>{!h.is_active && <span className="tag">closed</span>}</td>
+              <td><a href={`/hubs/${h.id}`}><strong>{h.name}</strong></a> <span className="muted">{h.code}</span>{!h.is_active && <span className="tag">closed</span>}</td>
               <td>{h.address}<br /><span className="muted">{h.phone}</span></td>
               <td style={{ color: h.capacity && h.parcels_in > h.capacity * 0.9 ? "var(--danger)" : undefined }}>{h.parcels_in} / {h.capacity}</td>
               <td>{h.staff.map((s) => `${s.name} (${s.role.replace("_", " ")})`).join(", ") || <span className="muted">none</span>}</td>

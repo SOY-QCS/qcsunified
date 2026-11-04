@@ -332,3 +332,40 @@ back in the wallet. If Hubtel isn't configured, approval is refused (nothing get
 ### Tests
 `supabase/tests/80_earnings_payouts.sql`: earnings, once-only pay, COD through the ledger, hand-in, banking,
 two-person approval, holds, failed transfers, cash-out fees, reconciliation, exports, ledger balance.
+
+## Phase 9 — Hubs, inter-city and fulfilment
+
+**Inter-city booking is now live** (portal and API: service `intercity`, option `doorstep` or `hub_collection`).
+Price = lane (origin hub → destination hub) by weight band, plus the doorstep fee if chosen.
+
+**The journey of an inter-city parcel**
+1. *First mile:* a rider collects from the sender and takes it to the origin hub ("Take to hub" on the job screen).
+2. *Scan in* (Rider app → Hub mode): the hub prints the QR label (Ops → Hubs → hub desk → "Print labels").
+3. *Bag:* open a bag for the destination, scan parcels into it, seal it, print the bag tag.
+4. *Manifest:* add bags, fill in the bus details (company, vehicle reg, driver phone, waybill, seal) and
+   press "Departed". The sender is notified.
+5. *Arrival:* destination hub scans each bag; parcels inside are received. Closing the manifest checks
+   that everything arrived — a note is required if anything is missing.
+6. *Last mile:* hub desk → "Plan deliveries" creates a trip from the hub; handler scans parcels over to the
+   rider ("Hand over"). Or, for hub collection, the recipient shows the code and signs in Hub mode.
+Hub-stuck parcels (Settings `hub_stuck_hours`, 24 h) and late buses (`linehaul_expected_hours`, 12 h) show on the hub desk.
+
+**Hub mode (Rider app).** Staff with the hub_handler role (linked to a hub on the Staff page) see only Hub
+mode: scan in, bag, receive bus, hand over, collect, pick. Scanning is continuous (beeps/vibrates, ignores
+double reads), works offline and syncs later; every scan is logged with who/when.
+
+**Printing.** Labels, bag tags and manifests are PDFs sized for a 100×150 mm thermal printer (one per hub).
+
+**Fulfilment (vendors with fulfilment turned on).**
+- Vendor portal → **Stock**: add products, see what's at each hub (on shelf / reserved / available), movements and charges.
+- Hub receives stock by scanning (Hub mode → Receive stock). Hub managers correct counts with a reason (audit log).
+- Booking "Send from: My stock at hub" reserves the units; the hub picks (Hub mode → Pick) and packs
+  (hub desk) — the pick-pack fee is charged then. Cancelled orders put the units back.
+- Low stock: vendor gets a push + email when available stock reaches their "warn me at" level.
+- Storage is billed on the 1st of each month (pg_cron) per unit in stock. Rates per hub on the hub desk
+  (placeholders: pick & pack GHS 3.00 per order, storage GHS 0.50 per unit per month).
+
+### Tests
+`supabase/tests/90_hubs_fulfilment.sql`: full Accra → Kumasi journey (doorstep and hub collection),
+bags, manifests, missing parcels, rider pay for both legs, stock receive/reserve/pick/pack, low-stock
+alerts, cancellations, storage billing, vendor privacy.

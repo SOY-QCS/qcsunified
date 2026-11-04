@@ -125,3 +125,25 @@ describe("rule validation (admin screens use these)", () => {
     expect(ExpressRule.safeParse({ baseFee: 1, perKm: 1, perMinute: 1, weightSurcharges: [{ maxG: 1, feePesewas: 0 }, { maxG: 1, feePesewas: 2 }], fragileSurcharge: 0, nightSurcharge: 0 }).success).toBe(false);
   });
 });
+
+describe("priceBooking — Inter-city", () => {
+  const lane = row({ rule_kind: "intercity_lane", origin_hub_id: "acc-hub", dest_hub_id: "ksi-hub",
+    config: { bands: [{ maxG: 5000, feePesewas: 5000 }, { maxG: 30000, feePesewas: 10000 }], doorstepFee: 1500 } });
+  const base = { service: "intercity" as const, cityId: ACC, rules: [lane], now: new Date("2026-11-04T07:00:00Z"), cutoff: "09:00",
+                 nightWindow: { start: "20:00", end: "06:00" }, surge: 1 };
+  it("hub to hub: lane price by weight", () => {
+    const p = priceBooking({ ...base, stops: [{ weightG: 3000, fragile: false, zoneId: null, originHubId: "acc-hub", destHubId: "ksi-hub" }] });
+    expect(p.totalPesewas).toBe(5000);
+    expect(p.pickupDate).toBe("2026-11-04");
+  });
+  it("doorstep adds the doorstep fee", () => {
+    const p = priceBooking({ ...base, stops: [{ weightG: 8000, fragile: false, zoneId: null, originHubId: "acc-hub", destHubId: "ksi-hub", doorstep: true }] });
+    expect(p.totalPesewas).toBe(11500);
+  });
+  it("no lane between those hubs: clear message", () => {
+    expect(() => priceBooking({ ...base, stops: [{ weightG: 1000, fragile: false, zoneId: null, originHubId: "acc-hub", destHubId: "tml-hub" }] })).toThrow(/inter-city route/);
+  });
+  it("city without a hub", () => {
+    expect(() => priceBooking({ ...base, stops: [{ weightG: 1000, fragile: false, zoneId: null }] })).toThrow(/no QCS hub/);
+  });
+});
