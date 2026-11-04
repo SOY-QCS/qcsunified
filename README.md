@@ -271,3 +271,32 @@ average of their last 100. 1–2 stars alert Support. Riders rate the pickup rig
 `supabase/tests/60_tracking_notifications.sql` (fan-out, preferences, privacy of tracking, brute-force lock,
 pin correction, sender worker, ratings), `supabase/functions/tests/send-notifications.test.ts`,
 `apps/client-portal/src/server/tracking.test.ts` (re-pricing a moved pin), `packages/types/src/tracking.test.ts`.
+
+## Phase 7 — Operations dashboard
+
+Everything below respects cities: a City Admin, Dispatcher or Support agent sees and changes only their
+own city (the database enforces it, not just the screens). Super Admin, Finance and Analysts see all.
+
+| Page | What it's for |
+|---|---|
+| **Overview** | Today's numbers: booked, delivered, moving now, riders free / on a job, open exceptions. |
+| **Live map** | Riders (green = free, orange = on a job, red = on a job with no signal, grey = offline) and parcels (purple = waiting for a rider, blue = with a rider, black = failed), hubs. Refreshes every 10 s. Click a dot to open it. |
+| **Exceptions** | Jobs with no rider for 10+ min, late parcels (Express 90 min, e-commerce by 20:00 on pickup day, inter-city 72 h), failed attempts, unconfirmed addresses, riders over their cash limit or late remitting, riders on a job with no signal for 10 min. All limits are in Settings, per city. |
+| **Orders** | Filter by stage, service, date; search tracking no., phone, name or vendor ref. "Needs a trip" lists single-drop e-commerce parcels: tick the ones from the same pickup → **Make a trip** sends them to riders. |
+| **Trip page** | Assign; **reassign** (also after pickup, e.g. breakdown — reason required, both riders told); take the rider off; **split** parcels into a new trip; **merge** another trip in (same pickup within 300 m, max 25). |
+| **Riders** | Status, online, rating, acceptance, cash held, documents expiring in 30 days. Rider page: performance for any dates, **earnings estimate**, suspend / reactivate / offboard (City/Super Admin, reason required), commission and cash limit (Admin/Finance), document review with expiry dates, ratings, trips. |
+| **Vendors** | ID check, services, flags. Vendor page: volume vs 4-week average (churn risk), COD not yet paid out, wallet, pickup rating; controls — booking block / COD hold / payout schedule (**Finance only**), photo or pickup-code proof, customer service, fulfilment, account manager. Reason required, audit log. |
+| **Hubs** | Address, map pin, opening hours, capacity, parcels in the hub now, staff. |
+| **Cities & zones** | Draw zones on the map (click corners, drag to reshape, right-click a corner to remove). Super Admin adds cities. |
+| **Settings** | Every operational setting: default + per-city value. |
+
+**Rider pay** isn't paid out yet: the dashboard shows an *estimate* from Settings → `rider_pay`
+(fleet: GHS 5 per trip pickup + GHS 8 per delivered stop; independent: 20% of delivery fees — placeholders,
+please set real values). Weekly payouts come with the rider payouts phase.
+
+**Maps** need `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` (Maps JavaScript API) in the dashboard's Vercel settings;
+without it every page still works, just without the map.
+
+### Tests
+- `supabase/tests/70_ops_dashboard.sql`: city scoping, map states, exceptions, reassign/split/merge/plan, rider and vendor rules, zones, hubs, settings.
+- `supabase/tests/api-check.sh`: runs every query and function call in the apps against the real Supabase API layer (PostgREST). It catches broken joins and misspelled columns.

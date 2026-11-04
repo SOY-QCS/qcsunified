@@ -49,15 +49,20 @@ export function roleAssignmentProblem(role: AppRole, cityId: string | null, hubI
 export interface NavItem { href: string; label: string; roles: AppRole[] | null; ready: boolean }
 export const OPS_NAV: NavItem[] = [
   { href: "/",                    label: "Overview",          roles: null, ready: true },
-  { href: "/orders",              label: "Orders",            roles: ["super_admin", "city_admin", "dispatcher", "support", "analyst", "hub_manager"], ready: false },
+  { href: "/map",                 label: "Live map",          roles: ["super_admin", "city_admin", "dispatcher", "support", "analyst", "hub_manager"], ready: true },
+  { href: "/exceptions",          label: "Exceptions",        roles: ["super_admin", "city_admin", "dispatcher", "support", "analyst"], ready: true },
+  { href: "/orders",              label: "Orders",            roles: ["super_admin", "city_admin", "dispatcher", "support", "analyst", "hub_manager", "finance"], ready: true },
   { href: "/dispatch",            label: "Dispatch",          roles: ["super_admin", "city_admin", "dispatcher", "support"], ready: true },
+  { href: "/riders",              label: "Riders",            roles: ["super_admin", "city_admin", "dispatcher", "analyst", "finance"], ready: true },
   { href: "/riders/applications", label: "Rider applications", roles: ["super_admin", "city_admin"], ready: true },
-  { href: "/riders",              label: "Riders",            roles: ["super_admin", "city_admin", "dispatcher", "analyst"], ready: false },
-  { href: "/hubs",                label: "Hubs",              roles: ["super_admin", "city_admin", "hub_manager", "analyst"], ready: false },
+  { href: "/vendors",             label: "Vendors",           roles: ["super_admin", "city_admin", "support", "analyst", "finance"], ready: true },
+  { href: "/hubs",                label: "Hubs",              roles: ["super_admin", "city_admin", "hub_manager", "analyst", "dispatcher"], ready: true },
+  { href: "/zones",               label: "Cities & zones",    roles: ["super_admin", "city_admin", "dispatcher", "analyst", "finance"], ready: true },
   { href: "/crm",                 label: "CRM & Support",     roles: ["super_admin", "city_admin", "support", "analyst"], ready: false },
   { href: "/finance",             label: "Finance",           roles: ["super_admin", "finance", "analyst"], ready: true },
   { href: "/pricing",             label: "Pricing",           roles: ["super_admin", "city_admin", "finance"], ready: true },
   { href: "/notifications",       label: "Messages",          roles: ["super_admin", "city_admin", "support"], ready: true },
+  { href: "/settings",            label: "Settings",          roles: ["super_admin", "city_admin", "analyst"], ready: true },
   { href: "/users",               label: "Staff & roles",     roles: ["super_admin", "city_admin"], ready: true },
   { href: "/account/security",    label: "My account & 2FA",  roles: null, ready: true },
 ];

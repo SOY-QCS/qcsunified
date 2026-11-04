@@ -12,7 +12,7 @@ export interface MapPin { id: string; lat: number; lng: number; label: string; c
 // Google's script puts everything on window.google; we only use a few calls, typed loosely on purpose.
 type G = any; // eslint-disable-line @typescript-eslint/no-explicit-any
 let loading: Promise<G> | null = null;
-function loadGoogle(key: string): Promise<G> {
+export function loadGoogle(key: string): Promise<G> {
   const w = window as unknown as { google?: G; __qcsMapsReady?: () => void };
   if (w.google?.maps) return Promise.resolve(w.google);
   loading ??= new Promise((resolve, reject) => {

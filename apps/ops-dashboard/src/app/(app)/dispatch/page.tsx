@@ -17,8 +17,8 @@ export default async function Dispatch() {
   const [{ data: trips }, { data: riders }, { data: overrides }, { data: flagged }, { data: unconfirmed }] = await Promise.all([
     sb.from("trips").select("id, trip_type, dispatch_state, dispatch_misses, escalated_at, escalation_reason, dispatch_started_at, cod_total, orders(tracking_number)")
       .in("dispatch_state", ["escalated", "queued", "offering"]).order("escalated_at", { ascending: true, nullsFirst: false }).limit(100),
-    sb.from("riders").select("id, score, is_online, profiles(full_name, phone)").eq("status", "active").eq("is_online", true).limit(300),
-    sb.from("pod_overrides").select("id, reason, photo_path, created_at, orders(tracking_number), riders(profiles(full_name))").eq("status", "pending").order("created_at"),
+    sb.from("riders").select("id, score, is_online, profiles!riders_id_fkey(full_name, phone)").eq("status", "active").eq("is_online", true).limit(300),
+    sb.from("pod_overrides").select("id, reason, photo_path, created_at, orders(tracking_number), riders(profiles!riders_id_fkey(full_name))").eq("status", "pending").order("created_at"),
     sb.from("orders").select("id, tracking_number, pod_flagged, pod_method, delivered_at").not("pod_flagged", "is", null).order("delivered_at").limit(100),
     sb.from("orders").select("id, tracking_number, recipient_name, recipient_phone, dropoff_address_text, status, service_type")
       .in("address_confirmation", ["pending", "unconfirmed"]).in("service_type", ["ecommerce", "intercity"])
@@ -50,7 +50,7 @@ export default async function Dispatch() {
           {escalated.map((t) => (
             <tr key={t.id} className="bad">
               <td>{when(t.escalated_at)}</td>
-              <td>{t.trip_type} · {(t.orders as { tracking_number: string }[]).map((o) => o.tracking_number).join(", ")}{t.cod_total ? ` · COD GHS ${(t.cod_total / 100).toFixed(2)}` : ""}</td>
+              <td><a href={`/trips/${t.id}`}>{t.trip_type}</a> · {(t.orders as { tracking_number: string }[]).map((o) => o.tracking_number).join(", ")}{t.cod_total ? ` · COD GHS ${(t.cod_total / 100).toFixed(2)}` : ""}</td>
               <td>{t.escalation_reason}</td>
               <td><TripActions trip={t.id} riders={free} /></td>
             </tr>
@@ -66,7 +66,7 @@ export default async function Dispatch() {
           {searching.map((t) => (
             <tr key={t.id}>
               <td>{when(t.dispatch_started_at)}</td>
-              <td>{t.trip_type} · {(t.orders as { tracking_number: string }[]).map((o) => o.tracking_number).join(", ")}</td>
+              <td><a href={`/trips/${t.id}`}>{t.trip_type}</a> · {(t.orders as { tracking_number: string }[]).map((o) => o.tracking_number).join(", ")}</td>
               <td>{t.dispatch_misses} / 5</td>
               <td><TripActions trip={t.id} riders={free} /></td>
             </tr>
