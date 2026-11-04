@@ -124,3 +124,9 @@ Address confirmation timing (confirmed):
 - Hub scanning: every parcel gets a QR label; hub handlers scan IN, sort to outbound bag/manifest, scan OUT (in the Rider app's Hub mode, see section 4).
 - Manifests for inter-city line-haul (vehicle, driver, seal number, parcel list), with arrival scan at destination hub.
 - Fulfilment: vendor inventory per hub (SKU, qty, location), stock in/out, low-stock alerts, pick-pack for orders.
+
+Hub & inter-city details (confirmed):
+- Inter-city line-haul uses VIP buses and mini buses (not QCS vehicles). Each manifest records: bus company/station, driver name + phone, vehicle registration, bus waybill number, seal number, departure time, parcel list. Tracking between hubs is by scan events only (handed to bus → arrival scan at destination hub), no live GPS.
+- Labels: QR waybill labels are printed in the hub office when parcels arrive, not by vendors. Each hub needs a thermal label printer.
+- Before a parcel has a label (at pickup), the rider confirms it in the Rider app by scanning or entering the order code; the hub then prints and attaches the QR label on scan-in. Express orders that never pass through a hub do not need a label.
+- Fulfilment pricing (common model, all rates editable in admin per hub): monthly storage fee (per item or per shelf/bin space) + pick-pack fee per order, billed to the vendor wallet.
