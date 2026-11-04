@@ -107,3 +107,8 @@ Money details (confirmed):
 - Rider COD remittance: riders must remit all COD cash by end of day. If they miss the deadline or reach their cash float limit, they receive no new COD jobs until they remit.
 - Client wallet refunds: a client can request their wallet balance back; it is refunded to MoMo via Hubtel disbursement, to the same MoMo number used to top up (fraud protection).
 - Legal check before launch: confirm with a lawyer and Hubtel that the wallets comply with Bank of Ghana e-money rules (Payment Systems and Services Act, 2019).
+
+### 10. Addresses
+- Google Places autocomplete + pin drop + Ghana Post GPS code + landmark/description field + recipient phone.
+- Address confirmation flow: after booking, recipient gets a WhatsApp/SMS link to confirm or correct their pin before dispatch. Unconfirmed addresses are flagged to dispatch.
+- Saved addresses and address book for vendors (repeat customers).
