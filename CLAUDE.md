@@ -133,3 +133,10 @@ Hub & inter-city details (confirmed):
 - Fulfilment customer service: QCS Customer Support staff call and chat (WhatsApp) the vendor's customers on the vendor's behalf (order confirmation, delivery updates, questions). Agents work from the Ops dashboard, see only the orders of the vendors who bought this service, and every call/chat is logged against the order and visible to the vendor.
   - Messages and calls come from the QCS number, worded "QCS on behalf of <vendor name>". No per-vendor WhatsApp numbers.
   - Charged as a flat fee per delivered order (rate editable in admin), billed to the vendor wallet.
+
+### 12. CRM (inside ops dashboard)
+- Customer & vendor 360 profile: orders, spend, COD, complaints, notes, tags, account manager.
+- Leads pipeline for vendor acquisition (New → Contacted → Trial → Active → Churn risk).
+- Support tickets linked to orders, with SLA timers, assignment, internal notes, canned replies; tickets can be opened from the client app, WhatsApp or by support staff.
+- Segments + broadcast campaigns (SMS/WhatsApp/push) to vendor or customer groups.
+- Churn alerts: vendor whose weekly volume drops > X%.
