@@ -73,6 +73,18 @@ export function applyFlatPromo(_quote: Quote, flatFee: number, name = "Flat-rate
   return total([{ label: name, pesewas: flatFee }]);
 }
 
+/**
+ * What QCS pays when a parcel is lost or damaged (CLAUDE.md §5):
+ *   • insured  → the full declared value (damaged or missing)
+ *   • not insured and lost → 3× the delivery fee (multiplier is an admin setting)
+ * Uninsured damaged parcels are not covered by a rule yet — returns null so a person decides.
+ */
+export function compensationFor(o: { insured: boolean; declaredValue: number; deliveryFee: number; outcome: "lost" | "damaged"; uninsuredMultiplier?: number }): number | null {
+  if (o.insured) return o.declaredValue;
+  if (o.outcome === "lost") return o.deliveryFee * (o.uninsuredMultiplier ?? 3);
+  return null;
+}
+
 /** Insurance for high-value items: a share of the declared value (5% by default), rounded to the pesewa. */
 export function insurancePremium(declaredValuePesewas: number, rate: number): number {
   return Math.round(declaredValuePesewas * rate);

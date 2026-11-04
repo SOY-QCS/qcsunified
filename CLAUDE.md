@@ -60,6 +60,10 @@ Pricing rules (confirmed):
 - Express weight: parcels over 15 kg are refused at booking (bike-only service).
 - Mid-trip changes when the client already paid upfront: the extra amount is collected on delivery, and the client chooses either a Hubtel MoMo/card prompt or cash to the rider.
 - Failed and returned deliveries are charged 50% of the original delivery fee.
+- Flat-rate offers charge exactly the configured amount (higher or lower than the normal price).
+- Insurance: items declared at GHS 1,000+ (editable) are offered insurance at 5% of the declared value (editable), added to the delivery fee as a separate premium; promo codes never reduce it.
+- Compensation: insured parcels are refunded the full declared value if damaged or missing. Uninsured lost parcels are compensated at 3× the delivery fee (multiplier editable). Uninsured damaged parcels: no fixed rule yet — decided case by case.
+- Clients accept the Terms & Conditions at sign-up (version + time recorded). The insurance and compensation rules go into the T&C.
 The pricing engine lives in `packages/pricing` and is the ONLY place prices are calculated. Always show the client an estimated quote before they confirm.
 
 ### 6. Dispatch rules
@@ -78,6 +82,8 @@ Dispatch details (confirmed):
 ### 7. Order lifecycle (single status machine used everywhere)
 DRAFT → PENDING_PAYMENT → CONFIRMED → SEARCHING_RIDER → ASSIGNED → RIDER_AT_PICKUP → PICKED_UP → IN_TRANSIT → (AT_HUB → DEPARTED_HUB → ARRIVED_DEST_HUB → OUT_FOR_DELIVERY for inter-city) → ARRIVED_AT_DROPOFF → DELIVERED
 Exception branches: CANCELLED, FAILED_ATTEMPT (reason required), RESCHEDULED, RETURNING_TO_SENDER, RETURNED, LOST/DAMAGED (claim opened).
+Tracking number = pickup city code - booking time (Accra, YYYYMMDDHHMM) - destination city code, e.g. ACC-202611041301-KUM; a second parcel on the same route in the same minute gets -02, -03 ... City codes = first 3 letters of the city name (editable).
+Public tracking page: tracking numbers are guessable, so it shows delivery status only; address and recipient details need the last 4 digits of the recipient's phone.
 Every transition stores timestamp, actor, GPS point, and optional photo/note. Clients and vendors get notified on key transitions. Vendors' webhook URLs receive every transition.
 
 Lifecycle details (confirmed):

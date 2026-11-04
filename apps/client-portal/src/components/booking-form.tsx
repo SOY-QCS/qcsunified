@@ -119,7 +119,7 @@ export function BookingForm({ vendor, me, insurance }: { vendor: VendorInfo; me:
           {p(s.valueGhs) >= insurance.threshold && (
             <div className="notice" style={{ color: "var(--text)" }}>
               <strong>High-value item — insure it?</strong> Add {ghs(Math.round(p(s.valueGhs) * insurance.rate))} ({+(insurance.rate * 100).toFixed(2)}% of the declared value).
-              Insured parcels are refunded in full if damaged or missing.
+              Insured parcels are refunded in full if damaged or missing. Without insurance, a lost parcel is compensated at 3× the delivery fee.
               <label style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 600 }}><input type="checkbox" style={{ width: "auto" }} checked={s.insured} onChange={(e) => setStop(i, { insured: e.target.checked })} /> Yes, insure this parcel</label>
             </div>
           )}

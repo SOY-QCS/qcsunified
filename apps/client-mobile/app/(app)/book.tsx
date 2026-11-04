@@ -138,7 +138,7 @@ export default function Book() {
           {pes(s.value) >= insurance.threshold && (
             <View style={{ backgroundColor: "#fbeee4", borderRadius: 10, padding: 12, marginBottom: 12 }}>
               <Text style={{ fontWeight: "700" }}>High-value item — insure it?</Text>
-              <Text style={{ color: colors.text, marginTop: 4 }}>Add {ghs(Math.round(pes(s.value) * insurance.rate))} ({+(insurance.rate * 100).toFixed(2)}% of the value). Insured parcels are refunded in full if damaged or missing.</Text>
+              <Text style={{ color: colors.text, marginTop: 4 }}>Add {ghs(Math.round(pes(s.value) * insurance.rate))} ({+(insurance.rate * 100).toFixed(2)}% of the value). Insured parcels are refunded in full if damaged or missing. Without insurance, a lost parcel is compensated at 3× the delivery fee.</Text>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
                 <Text style={{ fontWeight: "600" }}>Insure this parcel</Text><Switch value={s.insured} onValueChange={(v) => setStop(i, { insured: v })} />
               </View>

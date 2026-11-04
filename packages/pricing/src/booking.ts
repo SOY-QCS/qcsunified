@@ -109,7 +109,7 @@ export function priceBooking(input: PriceBookingInput): BookingPrice {
     p.totalPesewas = p.netPesewas + p.insurancePesewas;
   });
   if (insuranceTotal) notes.push("Insured parcels are refunded in full if damaged or missing.");
-  if (uninsuredHighValue) notes.push(`${uninsuredHighValue === 1 ? "This item is" : `${uninsuredHighValue} items are`} high value and not insured — add insurance for ${+(ins.rate * 100).toFixed(2)}% of the declared value.`);
+  if (uninsuredHighValue) notes.push(`${uninsuredHighValue === 1 ? "This item is" : `${uninsuredHighValue} items are`} high value and not insured. If lost, uninsured parcels are compensated at 3× the delivery fee. Insure for ${+(ins.rate * 100).toFixed(2)}% of the declared value to be covered in full.`);
 
   return { stops: priced, subtotalPesewas: subtotal, discountPesewas: discount, insurancePesewas: insuranceTotal,
            totalPesewas: subtotal - discount + insuranceTotal, pickupDate, notes };

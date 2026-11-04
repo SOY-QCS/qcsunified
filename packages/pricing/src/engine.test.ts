@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  applyFlatPromo, insurancePremium, failedOrReturnFee, pinCorrectionExtra, promoDiscount, quoteEcommerceStop, quoteExpress, quoteIntercity,
+  applyFlatPromo, compensationFor, insurancePremium, failedOrReturnFee, pinCorrectionExtra, promoDiscount, quoteEcommerceStop, quoteExpress, quoteIntercity,
   PricingError, cedisToPesewas, formatCedis, type ExpressRule,
 } from "./index";
 
@@ -58,6 +58,11 @@ describe("promos and rules", () => {
     expect(promoDiscount(10_000, { id: "a", kind: "percent", value: 10 })).toBe(1000);
     expect(promoDiscount(50_000, { id: "a", kind: "percent", value: 10, maxDiscount: 1000 })).toBe(1000);
     expect(promoDiscount(500, { id: "a", kind: "fixed", value: 2000 })).toBe(500);
+  });
+  it("compensation: insured = full value; uninsured lost = 3× delivery fee; uninsured damaged = decided by a person", () => {
+    expect(compensationFor({ insured: true, declaredValue: 200_000, deliveryFee: 2500, outcome: "damaged" })).toBe(200_000);
+    expect(compensationFor({ insured: false, declaredValue: 200_000, deliveryFee: 2500, outcome: "lost" })).toBe(7500);
+    expect(compensationFor({ insured: false, declaredValue: 200_000, deliveryFee: 2500, outcome: "damaged" })).toBeNull();
   });
   it("failed/returned = 50%", () => expect(failedOrReturnFee(3500)).toBe(1750));
   it("pin correction re-prices only beyond 1 km", () => {
