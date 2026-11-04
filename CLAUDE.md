@@ -131,3 +131,5 @@ Hub & inter-city details (confirmed):
 - Before a parcel has a label (at pickup), the rider confirms it in the Rider app by scanning or entering the order code; the hub then prints and attaches the QR label on scan-in. Express orders that never pass through a hub do not need a label.
 - Fulfilment pricing (common model, all rates editable in admin per hub): monthly storage fee (per item or per shelf/bin space) + pick-pack fee per order, billed to the vendor wallet.
 - Fulfilment customer service: QCS Customer Support staff call and chat (WhatsApp) the vendor's customers on the vendor's behalf (order confirmation, delivery updates, questions). Agents work from the Ops dashboard, see only the orders of the vendors who bought this service, and every call/chat is logged against the order and visible to the vendor.
+  - Messages and calls come from the QCS number, worded "QCS on behalf of <vendor name>". No per-vendor WhatsApp numbers.
+  - Charged as a flat fee per delivered order (rate editable in admin), billed to the vendor wallet.
