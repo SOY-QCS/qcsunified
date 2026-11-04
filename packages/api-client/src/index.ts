@@ -12,3 +12,5 @@ export function createQcsClient(url: string, anonKey: string, options?: { storag
     auth: { persistSession: true, autoRefreshToken: true, storage: options?.storage },
   });
 }
+
+export * as hubtel from "./hubtel";

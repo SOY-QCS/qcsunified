@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 import { ghs } from "@/components/api";
+import { PayButton } from "@/components/pay-button";
 
 const STATUS: Record<string, string> = { PENDING_PAYMENT: "Waiting for payment", CONFIRMED: "Booked — finding a rider", DRAFT: "Draft" };
 
@@ -16,7 +17,14 @@ export default async function Booked({ searchParams }: PageProps<"/booked">) {
   return (
     <>
       <h1>Booked ✓</h1>
-      {sp.pay && <div className="card"><strong>Payment needed</strong><p className="muted">These orders start once payment is received. Online payment with Hubtel arrives in the next update — for now QCS will contact you.</p></div>}
+      {list.some((o) => o.status === "PENDING_PAYMENT") && (
+        <div className="card">
+          <strong>Payment needed</strong>
+          <p className="muted">These orders start once Hubtel confirms your payment (MoMo or card). Unpaid orders are cancelled after an hour.</p>
+          <PayButton orderIds={list.filter((o) => o.status === "PENDING_PAYMENT").map((o) => o.id)}
+            label={`Pay ${ghs(list.filter((o) => o.status === "PENDING_PAYMENT").reduce((t, o) => t + o.quoted_fee + o.insurance_premium, 0))} now`} />
+        </div>
+      )}
       <div className="card">
         <strong>Print labels</strong>
         <p className="muted">Stick one label on each parcel. The QR code is scanned at pickup, at the hub and at delivery.</p>

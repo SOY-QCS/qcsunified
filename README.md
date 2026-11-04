@@ -138,3 +138,29 @@ checked, problems listed by row with a downloadable error report; more than 25 r
 - **Insurance**: items declared at GHS 1,000+ are offered insurance at 5% of the declared value (both editable in Pricing → Insurance by Finance).
   Insured parcels are refunded in full if damaged or missing. The premium is kept separate from the delivery fee (`orders.insurance_premium`) and promo codes never reduce it.
 - **Terms & Conditions**: clients tick "I agree" at sign-up (app and portal); `accept_terms()` records the version and time. Set the real link in `app_settings.terms_url`.
+
+## Phase 4 — Payments and wallets (Hubtel)
+
+**How paying works**
+| Who pays / how | When the order is CONFIRMED | When money moves |
+|---|---|---|
+| Card or MoMo (Hubtel checkout) | only after Hubtel's payment is verified | at payment |
+| Customer wallet | at booking | at booking (promo credit first, then balance) |
+| Business wallet | at booking | delivery fee per successful delivery; 50% if returned; insurance at booking |
+| Corporate invoice / cash / recipient pays | at booking | later (invoicing / rider cash phases) |
+
+**Hubtel callbacks aren't signed by Hubtel**, so the server never trusts one on its own:
+1. our callback address carries a secret token (`HUBTEL_CALLBACK_TOKEN`),
+2. the payment must match one we created — same reference, checkout id and exact amount,
+3. if `HUBTEL_STATUS_URL` is set, we ask Hubtel directly before crediting,
+4. every message is stored once; repeats change nothing.
+A scheduled job (`/api/v1/payments/reconcile`, every 5 minutes) catches payments whose callback never arrived, and cancels card/MoMo orders unpaid after 60 minutes.
+
+**Refunds:** cancelled paid orders → automatic refund to the wallet. Returned → 50% back. Finance can refund any amount up to what was charged (Ops → Finance).
+**Withdrawals:** customers can send wallet cash back to the MoMo number they topped up with; Finance approves; Hubtel sends it.
+**Referrals:** everyone has a code (e.g. `QCSAB12C`); a new customer enters a friend's code at sign-up; after their first delivery both get GHS 10 promo credit (editable). Credit is spend-only.
+**Statements:** Business portal → Wallet → PDF or CSV for any date range.
+
+**Testing without Hubtel:** set `DEV_FAKE_PAYMENTS=1` (local only) — checkout opens a test page with "Pay" / "Decline" buttons.
+
+**Tests:** `pnpm db:test` (227 checks incl. 50+ money checks), `pnpm test` (Hubtel client 13, callback handling 7, statements 3, …).

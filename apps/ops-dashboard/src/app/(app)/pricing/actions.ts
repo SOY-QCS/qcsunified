@@ -88,3 +88,28 @@ export async function saveInsurance(rate: number, thresholdPesewas: number): Pro
   }
   return done("Insurance settings saved.");
 }
+
+const PromoCodeInput = z.object({
+  code: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{3,20}$/, "Code: 3–20 letters/numbers"),
+  kind: z.enum(["percent", "fixed"]), value: z.number().int().positive("Enter the discount"),
+  max_discount: z.number().int().positive().nullable(), city_id: z.uuid().nullable(), service_type: z.enum(["express", "ecommerce"]).nullable(),
+  max_uses: z.number().int().positive().nullable(), per_user_limit: z.number().int().positive(),
+  valid_from: z.iso.datetime(), valid_to: z.iso.datetime().nullable(),
+}).refine((p) => p.kind !== "percent" || p.value <= 100, "A percentage can't be over 100");
+
+export async function createPromoCode(input: z.input<typeof PromoCodeInput>): Promise<Result> {
+  const p = PromoCodeInput.safeParse(input);
+  if (!p.success) return fail(p.error.issues[0]!.message);
+  const sb = await supabaseServer();
+  const { error } = await sb.from("promo_codes").insert({ ...p.data, is_active: true });
+  if (error) return fail(error.code === "23505" ? "That code already exists" : error.message);
+  return done(`Promo code ${p.data.code} created.`);
+}
+
+export async function setPromoActive(id: string, active: boolean): Promise<Result> {
+  const sb = await supabaseServer();
+  const { data, error } = await sb.from("promo_codes").update({ is_active: active }).eq("id", id).select("id");
+  if (error) return fail(error.message);
+  if (!data?.length) return fail("You don't have permission to change this.");
+  return done(active ? "Switched on." : "Switched off.");
+}

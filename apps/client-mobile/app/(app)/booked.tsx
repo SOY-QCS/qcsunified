@@ -6,6 +6,7 @@ import * as Sharing from "expo-sharing";
 import { Banner, Button, Screen, Title } from "@qcs/mobile";
 import { colors } from "@qcs/ui";
 import { API_URL, authHeader, ghs, type BookingResult } from "../../lib/api";
+import { payWithHubtel } from "../../lib/pay";
 
 /** After booking: tracking numbers, QR codes and the label PDF to print or send on WhatsApp. */
 export default function Booked() {
@@ -13,6 +14,7 @@ export default function Booked() {
   const { data } = useLocalSearchParams<{ data: string }>();
   const r = JSON.parse(data ?? "{}") as BookingResult;
   const [busy, setBusy] = useState<string | null>(null);
+  const [paid, setPaid] = useState(!r.needs_payment);
   const [error, setError] = useState<string | null>(null);
   const ids = (r.orders ?? []).map((o) => o.id).join(",");
 
@@ -28,7 +30,15 @@ export default function Booked() {
 
   return (
     <Screen>
-      <Title sub={r.needs_payment ? "Waiting for payment — QCS will contact you to pay while online payment is being set up." : "We're finding a rider."}>Booked ✓</Title>
+      <Title sub={paid ? "We're finding a rider." : "Pay to confirm — unpaid bookings are cancelled after an hour."}>{paid ? "Booked ✓" : "Almost done"}</Title>
+      {!paid && <Button title={`Pay ${ghs(r.total ?? 0)} with MoMo or card`} busy={busy === "pay"} onPress={async () => {
+        setBusy("pay"); setError(null);
+        try {
+          const res = await payWithHubtel({ purpose: "order", order_ids: (r.orders ?? []).map((o) => o.id) });
+          if (res === "paid") setPaid(true);
+          else setError(res === "pending" ? "Waiting for Hubtel to confirm. Check again in a moment." : "Payment didn't go through. Nothing was taken — try again.");
+        } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
+      }} />}
       {(r.orders ?? []).map((o) => (
         <View key={o.id} style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: "#e6e1da" }}>
           <Image source={{ uri: `${API_URL}/api/v1/qr/${o.tracking_number}.png` }} style={{ width: 64, height: 64, marginRight: 12 }} />

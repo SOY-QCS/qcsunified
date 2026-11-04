@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import type { WeightBand } from "@qcs/pricing";
-import { createFlatPromo, saveCitySetting, saveCutoff, saveInsurance, saveRule, setRuleActive, type Result } from "./actions";
+import { createFlatPromo, createPromoCode, saveCitySetting, saveCutoff, saveInsurance, saveRule, setPromoActive, setRuleActive, type Result } from "./actions";
 
 // People type cedis and kilograms; the database stores pesewas and grams.
 const toGhs = (p: number) => (p / 100).toFixed(2);
@@ -207,6 +207,59 @@ export function InsuranceEditor({ rate, threshold, canEdit }: { rate: number; th
       {canEdit ? <button className="btn" style={{ marginTop: 12 }} disabled={save.pending} onClick={() => save.run(() => saveInsurance(Number(pct) / 100, toP(min)))}>Save insurance</button>
                : <p className="muted">Only Finance or a Super Admin can change insurance.</p>}
       <save.Msg />
+    </div>
+  );
+}
+
+export interface PromoCodeRow { id: string; code: string; kind: "percent" | "fixed"; value: number; max_discount: number | null; service_type: string | null; max_uses: number | null; used_count: number; per_user_limit: number; valid_to: string | null; is_active: boolean }
+
+export function PromoCodeEditor({ cityId, codes, canEdit }: { cityId: string; codes: PromoCodeRow[]; canEdit: boolean }) {
+  const [f, setF] = useState({ code: "", kind: "percent" as "percent" | "fixed", value: "10", cap: "", service: "", uses: "", per: "1", to: "", wholeCountry: false });
+  const save = useSave(), toggle = useSave();
+  return (
+    <div className="card">
+      <strong>Promo codes</strong>
+      <p className="muted">Customers type the code when booking. Discounts apply to delivery fees only (never to insurance).</p>
+      <table>
+        <thead><tr><th>Code</th><th>Discount</th><th>For</th><th>Used</th><th>Ends</th><th /></tr></thead>
+        <tbody>
+          {codes.map((c) => (
+            <tr key={c.id}>
+              <td><strong>{c.code}</strong></td>
+              <td>{c.kind === "percent" ? `${c.value}%${c.max_discount ? ` (max GHS ${toGhs(c.max_discount)})` : ""}` : `GHS ${toGhs(c.value)}`}</td>
+              <td>{c.service_type ?? "All services"} · {c.per_user_limit}× per customer</td>
+              <td>{c.used_count}{c.max_uses ? ` / ${c.max_uses}` : ""}</td>
+              <td>{c.valid_to ? new Date(c.valid_to).toLocaleDateString("en-GB", { timeZone: "Africa/Accra" }) : "—"}</td>
+              <td>{canEdit && <button className={`btn small ${c.is_active ? "danger" : "secondary"}`} onClick={() => toggle.run(() => setPromoActive(c.id, !c.is_active))}>{c.is_active ? "Switch off" : "Switch on"}</button>}</td>
+            </tr>
+          ))}
+          {codes.length === 0 && <tr><td colSpan={6} className="muted">No promo codes yet.</td></tr>}
+        </tbody>
+      </table>
+      <toggle.Msg />
+      {canEdit && <>
+        <h2>New promo code</h2>
+        <div className="row">
+          <div><label>Code</label><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} placeholder="XMAS20" /></div>
+          <div><label>Type</label><select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as "percent" | "fixed" })}><option value="percent">% off</option><option value="fixed">GHS off</option></select></div>
+          <div><label>{f.kind === "percent" ? "Percent" : "Amount (GHS)"}</label><input inputMode="decimal" value={f.value} onChange={(e) => setF({ ...f, value: e.target.value })} /></div>
+          {f.kind === "percent" && <Money label="Max discount (GHS, optional)" value={f.cap} onChange={(v) => setF({ ...f, cap: v })} />}
+        </div>
+        <div className="row">
+          <div><label>Service</label><select value={f.service} onChange={(e) => setF({ ...f, service: e.target.value })}><option value="">All</option><option value="express">Express</option><option value="ecommerce">E-commerce</option></select></div>
+          <div><label>Total uses (optional)</label><input inputMode="numeric" value={f.uses} onChange={(e) => setF({ ...f, uses: e.target.value })} /></div>
+          <div><label>Uses per customer</label><input inputMode="numeric" value={f.per} onChange={(e) => setF({ ...f, per: e.target.value })} /></div>
+          <div><label>Ends (optional)</label><input type="date" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></div>
+        </div>
+        <label style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={f.wholeCountry} onChange={(e) => setF({ ...f, wholeCountry: e.target.checked })} /> Valid in every city (otherwise this city only)</label>
+        <button className="btn" style={{ marginTop: 12 }} disabled={save.pending} onClick={() => save.run(() => createPromoCode({
+          code: f.code, kind: f.kind, value: f.kind === "percent" ? Math.round(Number(f.value)) : toP(f.value), max_discount: f.cap ? toP(f.cap) : null,
+          city_id: f.wholeCountry ? null : cityId, service_type: (f.service || null) as "express" | "ecommerce" | null,
+          max_uses: f.uses ? Number(f.uses) : null, per_user_limit: Number(f.per || 1),
+          valid_from: new Date().toISOString(), valid_to: f.to ? new Date(`${f.to}T23:59:59Z`).toISOString() : null,
+        }))}>Create code</button>
+        <save.Msg />
+      </>}
     </div>
   );
 }

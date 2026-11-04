@@ -33,7 +33,8 @@ export default function Home() {
         <Text style={{ color: colors.muted, marginTop: 6 }}>{mode === "business" ? "Express now, or an e-commerce trip with up to 25 drop-offs." : "Express delivery anywhere in the city."}</Text>
         <Button title="Book a delivery" onPress={() => router.push({ pathname: "/book", params: { mode } })} />
       </View>
-      <Text style={{ color: colors.muted }}>Tracking and your wallet arrive in the next update.</Text>
+      {mode === "personal" && <Button title="My wallet & invite friends" kind="secondary" onPress={() => router.push("/wallet")} />}
+      <Text style={{ color: colors.muted, marginTop: 8 }}>Live tracking arrives in the next update.</Text>
       <View style={{ flex: 1 }} />
       <Button title="Sign out" kind="secondary" onPress={() => supabase().auth.signOut()} />
     </Screen>

@@ -2,13 +2,14 @@ import Link from "next/link";
 import type { PricingRuleRow, WeightBand } from "@qcs/pricing";
 import { requireRole } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
-import { CutoffEditor, ExpressEditor, InsuranceEditor, LaneEditor, PromoEditor, ZoneEditor, type ExpressConfig } from "./editors";
+import { CutoffEditor, ExpressEditor, InsuranceEditor, LaneEditor, PromoCodeEditor, PromoEditor, ZoneEditor, type ExpressConfig, type PromoCodeRow } from "./editors";
 
 const TABS = [
   { id: "express", label: "Express" },
   { id: "ecommerce", label: "E-commerce zones" },
   { id: "intercity", label: "Inter-city lanes" },
   { id: "offers", label: "Flat-rate offers" },
+  { id: "codes", label: "Promo codes" },
   { id: "insurance", label: "Insurance" },
 ] as const;
 
@@ -16,12 +17,13 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
   const me = await requireRole(["super_admin", "city_admin", "finance"]);
   const sp = await searchParams;
   const sb = await supabaseServer();
-  const [{ data: cities }, { data: zones }, { data: hubs }, { data: rules }, { data: settings }] = await Promise.all([
+  const [{ data: cities }, { data: zones }, { data: hubs }, { data: rules }, { data: settings }, { data: codes }] = await Promise.all([
     sb.from("cities").select("id, code, name, same_day_cutoff").order("name"),
     sb.from("zones").select("id, code, name, city_id").order("name"),
     sb.from("hubs").select("id, code, name, city_id").order("name"),
     sb.from("pricing_rules").select("*").order("created_at"),
     sb.from("app_settings").select("key, city_id, value").in("key", ["surge_multiplier", "night_window", "insurance_rate", "high_value_threshold"]),
+    sb.from("promo_codes").select("*").order("created_at", { ascending: false }),
   ]);
 
   const isGlobal = me.roles.some((r) => r.role === "super_admin" || r.role === "finance");
@@ -73,6 +75,10 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
               config={(r?.config as { bands: WeightBand[]; doorstepFee: number }) ?? null} canEdit />;
           }))}
         </>
+      )}
+
+      {tab === "codes" && (
+        <PromoCodeEditor key={`pc-${city.id}`} cityId={city.id} canEdit codes={((codes ?? []) as (PromoCodeRow & { city_id: string | null })[]).filter((c) => !c.city_id || c.city_id === city.id)} />
       )}
 
       {tab === "insurance" && (

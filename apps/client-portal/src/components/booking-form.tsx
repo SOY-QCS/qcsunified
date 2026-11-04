@@ -66,7 +66,12 @@ export function BookingForm({ vendor, me, insurance }: { vendor: VendorInfo; me:
     setBusy(true); setProblems([]);
     try {
       const r = await api<BookingResult>("/api/v1/bookings", { method: "POST", body: JSON.stringify({ quote_id: quote.quote_id }) });
-      router.push(`/booked?orders=${r.orders.map((o) => o.id).join(",")}${r.needs_payment ? "&pay=1" : ""}`);
+      if (r.needs_payment) {
+        // straight to Hubtel's payment page
+        const pay = await api<{ checkout_url: string }>("/api/v1/payments", { method: "POST", body: JSON.stringify({ purpose: "order", order_ids: r.orders.map((o) => o.id) }) }).catch(() => null);
+        if (pay) { window.location.href = pay.checkout_url; return; }
+      }
+      router.push(`/booked?orders=${r.orders.map((o) => o.id).join(",")}`);
     } catch (e) { setProblems([(e as Error).message]); setBusy(false); }
   }
 

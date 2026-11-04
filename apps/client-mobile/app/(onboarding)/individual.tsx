@@ -3,6 +3,7 @@ import { Linking, Switch, Text, View } from "react-native";
 import { Banner, Button, Choice, Field, Screen, Title, supabase } from "@qcs/mobile";
 import { useAuth } from "../../lib/auth";
 import { useCities, useTermsUrl } from "../../lib/cities";
+import { api } from "../../lib/api";
 
 export default function Individual() {
   const { session, refresh } = useAuth();
@@ -12,6 +13,7 @@ export default function Individual() {
   const [city, setCity] = useState<string | null>(null);
   const [optIn, setOptIn] = useState(false);
   const [terms, setTerms] = useState(false);
+  const [referral, setReferral] = useState("");
   const termsUrl = useTermsUrl();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +31,10 @@ export default function Individual() {
       .update({ full_name: name.trim(), email: email.trim() || null, city_id: city, marketing_opt_in: optIn })
       .eq("id", session!.user.id);
     if (error) { setBusy(false); return setError(error.message); }
+    if (referral.trim()) {
+      const r = await api("/api/v1/referral", { method: "POST", body: JSON.stringify({ code: referral.trim() }) }).catch((e: Error) => e);
+      if (r instanceof Error) { setBusy(false); return setError(`Saved — but the referral code didn't work: ${r.message}`); }
+    }
     await refresh();
     setBusy(false);
   }
@@ -38,6 +44,7 @@ export default function Individual() {
       <Title sub="Just a few details and you're ready to send.">About you</Title>
       <Field label="Full name" value={name} onChangeText={setName} autoComplete="name" textContentType="name" />
       <Field label="Email (optional)" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" hint="For receipts" />
+      <Field label="Friend's referral code (optional)" value={referral} autoCapitalize="characters" onChangeText={(t) => setReferral(t.toUpperCase())} placeholder="QCSAB12C" />
       <Choice label="City" options={cities.map((c) => ({ value: c.id, label: c.name }))} value={city} onChange={setCity} />
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginVertical: 8 }}>
         <Text style={{ flex: 1 }}>Send me offers and news from QCS</Text>
