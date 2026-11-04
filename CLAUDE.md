@@ -74,3 +74,8 @@ Dispatch details (confirmed):
 - Bulk next-stop suggestion uses straight-line distance (no Google cost).
 - Escalation default: N = 5 rejections/timeouts (about 2 minutes), then the job goes to a dispatcher. Editable in admin.
 - Rejections and timeouts count against the rider's score, which is used for rewards. Rider acceptance rate is tracked and shown on the rider profile.
+
+### 7. Order lifecycle (single status machine used everywhere)
+DRAFT → PENDING_PAYMENT → CONFIRMED → SEARCHING_RIDER → ASSIGNED → RIDER_AT_PICKUP → PICKED_UP → IN_TRANSIT → (AT_HUB → DEPARTED_HUB → ARRIVED_DEST_HUB → OUT_FOR_DELIVERY for inter-city) → ARRIVED_AT_DROPOFF → DELIVERED
+Exception branches: CANCELLED, FAILED_ATTEMPT (reason required), RESCHEDULED, RETURNING_TO_SENDER, RETURNED, LOST/DAMAGED (claim opened).
+Every transition stores timestamp, actor, GPS point, and optional photo/note. Clients and vendors get notified on key transitions. Vendors' webhook URLs receive every transition.
