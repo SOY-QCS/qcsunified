@@ -86,3 +86,8 @@ Lifecycle details (confirmed):
 - Bulk trips have two levels: the trip has its own status (ASSIGNED → IN_PROGRESS → COMPLETED), and each order in the trip keeps its own full status. One failed stop does not fail the trip.
 - Proof of delivery: every delivery (and hub collection) requires BOTH a 4-digit OTP sent to the recipient by SMS/WhatsApp AND the recipient's signature on the rider's screen. A photo is optional.
 - If the recipient cannot give the OTP (e.g. no phone), the rider requests an override; Customer Support or a Dispatcher approves it with a required photo + note. Every override is written to the audit log.
+
+### 8. Proof of delivery
+- 4-digit delivery code sent to recipient (SMS/WhatsApp); rider must enter it to complete — OR recipient signature on screen — OR photo, configurable per vendor.
+- Separate pickup code for high-value items.
+- Geofence check: rider must be within X metres of drop-off to mark delivered (admin override with reason).
