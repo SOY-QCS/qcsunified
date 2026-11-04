@@ -156,7 +156,9 @@ update riders set is_online = true where city_id = (select acc from k) and id <>
 -- 3. COD job skips the COD-blocked rider; bulk trip sent by a dispatcher
 -- =====================================================================
 select tests.service();
-create temp table b1 as select tests.book('00000000-0000-0000-0000-000000000411', 'vendor_wallet', 'wallet', 2, '10000000-0000-0000-0000-000000000401', 10000) r;
+select tests.service();
+select tests.ok((select bool_and(cod_float_limit is null) from riders), 'riders have no cash limit unless ops sets one');
+create temp table b1 as select tests.book('00000000-0000-0000-0000-000000000411', 'vendor_wallet', 'wallet', 2, '10000000-0000-0000-0000-000000000401', 70000) r;  -- GHS 700 COD: above the old GHS 500 default, fine now there's no default limit
 grant select on b1 to anon, authenticated, service_role;
 select tests.logout();
 create temp table bt as select (r ->> 'trip_id')::uuid id from b1;
@@ -215,12 +217,12 @@ select rider_action(gen_random_uuid(), jsonb_build_object('type', 'code', 'order
 insert into storage.objects (bucket_id, name) values ('pod', (select id from bo where n = 1)::text || '/sig.svg');
 select rider_action(gen_random_uuid(), jsonb_build_object('type', 'pod', 'order_id', (select id from bo where n = 1), 'signature_path', 'x/sig.svg'));
 select tests.expect_error($$select rider_action(gen_random_uuid(), jsonb_build_object('type', 'status', 'order_id', (select id from bo where n = 1), 'to', 'DELIVERED', 'lng', -0.1612, 'lat', 5.6356))$$,
-  'record the ghs 100.00 cash', 'COD parcel: cash must be recorded first');
+  'record the ghs 700.00 cash', 'COD parcel: cash must be recorded first');
 select tests.expect_error($$select rider_action(gen_random_uuid(), jsonb_build_object('type', 'cod', 'order_id', (select id from bo where n = 1), 'amount', 5000))$$,
-  'collect exactly ghs 100.00', 'COD: the exact amount only');
-select rider_action(gen_random_uuid(), jsonb_build_object('type', 'cod', 'order_id', (select id from bo where n = 1), 'amount', 10000, 'method', 'cash'));
+  'collect exactly ghs 700.00', 'COD: the exact amount only');
+select rider_action(gen_random_uuid(), jsonb_build_object('type', 'cod', 'order_id', (select id from bo where n = 1), 'amount', 70000, 'method', 'cash'));
 select rider_action(gen_random_uuid(), jsonb_build_object('type', 'status', 'order_id', (select id from bo where n = 1), 'to', 'DELIVERED', 'lng', -0.1612, 'lat', 5.6356));
-select tests.ok((select cod_float_balance = 10000 from riders where id = auth.uid()), 'rider now holds GHS 100 COD cash (float tracked)');
+select tests.ok((select cod_float_balance = 70000 from riders where id = auth.uid()), 'rider now holds GHS 700 COD cash (float tracked)');
 
 -- failed attempt needs a reason; override when the recipient has no phone
 select rider_action(gen_random_uuid(), jsonb_build_object('type', 'status', 'order_id', id, 'to', s)) from bo, unnest(array['RIDER_AT_PICKUP','PICKED_UP','IN_TRANSIT','ARRIVED_AT_DROPOFF']) s where n = 2;

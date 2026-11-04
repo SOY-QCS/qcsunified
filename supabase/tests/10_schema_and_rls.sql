@@ -156,7 +156,7 @@ select tests.expect_error($$insert into rider_location_pings (rider_id, location
 select tests.login('00000000-0000-0000-0000-000000000008');
 insert into riders (id, rider_type, status, city_id, score, cod_float_limit)
 select '00000000-0000-0000-0000-000000000008', 'commission', 'active', acc, 999, 99999999 from ids;
-select tests.ok((select status = 'applicant' and score = 100 and cod_float_limit = 50000 from riders where id='00000000-0000-0000-0000-000000000008'), 'rider sign-up forced to applicant with default settings');
+select tests.ok((select status = 'applicant' and score = 100 and cod_float_limit is null from riders where id='00000000-0000-0000-0000-000000000008'), 'rider sign-up forced to applicant with default settings');
 select tests.expect_error($$update riders set is_online = true where id='00000000-0000-0000-0000-000000000008'$$, 'not active', 'applicant cannot go online');
 
 -- =====================================================================

@@ -169,7 +169,8 @@ A scheduled job (`/api/v1/payments/reconcile`, every 5 minutes) catches payments
 
 **How a job finds a rider.** When an Express order is confirmed, the database makes a trip and starts
 dispatch. Every 5 seconds a scheduled database job (`dispatch_tick`) offers waiting jobs to the
-nearest free, online, eligible rider (right city, vehicle, weight, cash-float limit, documents valid).
+nearest free, online, eligible rider (right city, vehicle, weight, documents valid, no unremitted cash from
+yesterday). Riders have no cash-on-delivery limit unless Ops sets one for a particular rider.
 The rider has 20 seconds. Reject or no answer → next nearest rider, and it counts against the rider's
 score. After 5 misses (about 2 minutes) the job appears on **Ops dashboard → Dispatch** under
 "Needs a dispatcher", where it can be assigned by hand or offered again. A rider can only hold one job.
