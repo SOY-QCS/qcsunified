@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import type { WeightBand } from "@qcs/pricing";
-import { createFlatPromo, saveCitySetting, saveCutoff, saveRule, setRuleActive, type Result } from "./actions";
+import { createFlatPromo, saveCitySetting, saveCutoff, saveInsurance, saveRule, setRuleActive, type Result } from "./actions";
 
 // People type cedis and kilograms; the database stores pesewas and grams.
 const toGhs = (p: number) => (p / 100).toFixed(2);
@@ -155,7 +155,7 @@ export function PromoEditor({ cityId, zones, promos, canEdit }: { cityId: string
   return (
     <div className="card">
       <strong>Flat-rate offers</strong>
-      <p className="muted">A fixed price for a zone (or the whole city) between two dates. Customers pay the flat price or the normal price, whichever is lower.</p>
+      <p className="muted">A fixed price for a zone (or the whole city) between two dates. Every delivery in that area is charged exactly this amount.</p>
       <table>
         <thead><tr><th>Offer</th><th>Where</th><th>Price</th><th>Dates</th><th /></tr></thead>
         <tbody>
@@ -186,6 +186,27 @@ export function PromoEditor({ cityId, zones, promos, canEdit }: { cityId: string
         }))}>Create offer</button>
         <save.Msg />
       </>}
+    </div>
+  );
+}
+
+/** Insurance for high-value items (platform-wide; Finance and Super Admin). */
+export function InsuranceEditor({ rate, threshold, canEdit }: { rate: number; threshold: number; canEdit: boolean }) {
+  const [pct, setPct] = useState(String(+(rate * 100).toFixed(2)));
+  const [min, setMin] = useState(toGhs(threshold));
+  const save = useSave();
+  const example = Math.round(toP("2000") * Number(pct || 0) / 100);
+  return (
+    <div className="card">
+      <strong>Insurance for high-value items</strong>
+      <p className="muted">Items declared at or above the threshold are offered insurance. The premium is added to the delivery fee. Insured parcels are refunded in full if damaged or missing. Example: GHS 2,000 item → GHS {toGhs(example)} premium.</p>
+      <div className="row">
+        <div><label>Premium (% of declared value)</label><input inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value)} /></div>
+        <Money label="High-value threshold (GHS)" value={min} onChange={setMin} />
+      </div>
+      {canEdit ? <button className="btn" style={{ marginTop: 12 }} disabled={save.pending} onClick={() => save.run(() => saveInsurance(Number(pct) / 100, toP(min)))}>Save insurance</button>
+               : <p className="muted">Only Finance or a Super Admin can change insurance.</p>}
+      <save.Msg />
     </div>
   );
 }

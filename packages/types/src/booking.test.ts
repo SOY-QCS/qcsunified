@@ -22,6 +22,9 @@ describe("BookingRequest", () => {
   it("payment method must match payer", () => expect(bad({ payer: "recipient", payment_method: "momo" }).join()).toMatch(/payment method/));
   it("wallet/invoice only for businesses", () => expect(bad({ payer: "vendor_wallet", payment_method: "wallet" }).join()).toMatch(/business/));
   it("pin outside Ghana", () => expect(bad({ pickup: { ...place, lat: 51.5 } }).join()).toMatch(/Ghana/));
+  it("insurance flag defaults to off", () => {
+    expect(BookingRequest.parse({ service: "express", pickup: place, dropoffs: [drop], payer: "sender", payment_method: "momo" }).dropoffs[0]!.insured).toBe(false);
+  });
   it("bad phone explained with the drop-off number", () => expect(bad({ dropoffs: [{ ...drop, contact_phone: "123" }] })[0]).toMatch(/^Drop-off 1: Enter a Ghana phone/));
   it("bulk trip of 25 for a vendor", () => {
     const r = BookingRequest.safeParse({ service: "ecommerce", vendor_id: V, pickup: place, dropoffs: Array(25).fill(drop), payer: "vendor_wallet", payment_method: "wallet" });
@@ -35,7 +38,8 @@ describe("bulk upload", () => {
   it("reads friendly headers and converts cedis and kg", () => {
     const r = checkBulkRows([ok]);
     expect(r.problems).toEqual([]);
-    expect(r.rows[0]!.dropoff).toMatchObject({ weight_g: 1500, cod_amount: 35000, contact_phone: "+233241234567", lat: 5.6355 });
+    expect(r.rows[0]!.dropoff).toMatchObject({ weight_g: 1500, cod_amount: 35000, contact_phone: "+233241234567", lat: 5.6355, insured: false });
+    expect(checkBulkRows([{ ...ok, "Insure (yes/no)": "Yes" }]).rows[0]!.dropoff.insured).toBe(true);
   });
   it("reports each problem with the Excel row number", () => {
     const r = checkBulkRows([ok, { ...ok, "Recipient phone": "12", order_ref: "WC-2" }, { ...ok, "Weight (kg)": "heavy", order_ref: "WC-3" }]);

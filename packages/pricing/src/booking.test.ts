@@ -57,10 +57,12 @@ describe("priceBooking — E-commerce / bulk", () => {
   it("area we don't serve", () => {
     expect(() => priceBooking({ ...base, service: "ecommerce", now: morning, stops: [{ weightG: 1, fragile: false, zoneId: null }] })).toThrow(/Drop-off 1/);
   });
-  it("flat-rate promo for the whole city lowers every stop to the flat fee", () => {
+  it("flat-rate offer for the whole city sets every stop to the flat fee (even cheaper ones)", () => {
     const promo = row({ rule_kind: "flat_promo", name: "GHS 25 Accra", config: { flatFee: 2500 }, valid_from: "2026-11-01T00:00:00Z", valid_to: "2026-11-30T00:00:00Z" });
-    const p = priceBooking({ ...base, rules: [...rules, promo], service: "ecommerce", now: morning, stops });
-    expect(p.stops.map((s) => s.feePesewas)).toEqual([2500, 2500, 2500]);
+    const p = priceBooking({ ...base, rules: [...rules, promo], service: "ecommerce", now: morning, stops: [...stops, { weightG: 500, fragile: false, zoneId: OSU }] });
+    expect(p.stops.map((s) => s.feePesewas)).toEqual([2500, 2500, 2500, 2500]);
+    const cheap = row({ rule_kind: "flat_promo", config: { flatFee: 9900 } });
+    expect(priceBooking({ ...base, rules: [...rules, cheap], service: "ecommerce", now: morning, stops: [stops[0]!] }).totalPesewas).toBe(9900);
   });
   it("expired flat promo is ignored", () => {
     const promo = row({ rule_kind: "flat_promo", config: { flatFee: 100 }, valid_to: "2026-10-01T00:00:00Z" });
@@ -71,6 +73,32 @@ describe("priceBooking — E-commerce / bulk", () => {
     expect(p.discountPesewas).toBe(950);
     expect(p.totalPesewas).toBe(8550);
     expect(p.stops.reduce((t, s) => t + s.netPesewas, 0)).toBe(8550);
+  });
+});
+
+describe("insurance on high-value items", () => {
+  const ecommerce = (extra: object) => priceBooking({ ...base, service: "ecommerce", now: morning, stops: [{ weightG: 1500, fragile: false, zoneId: OSU, ...extra }] });
+  it("adds 5% of the declared value to the stop and the total", () => {
+    const p = ecommerce({ declaredValue: 200_000, insured: true });  // GHS 2,000
+    expect(p.stops[0]).toMatchObject({ netPesewas: 2500, insurancePesewas: 10_000, totalPesewas: 12_500 });
+    expect(p.totalPesewas).toBe(12_500);
+    expect(p.notes.join()).toMatch(/refunded in full/);
+  });
+  it("uses the admin's rate and threshold", () => {
+    const p = priceBooking({ ...base, service: "ecommerce", now: morning, insurance: { rate: 0.03, minValue: 50_000 },
+      stops: [{ weightG: 1500, fragile: false, zoneId: OSU, declaredValue: 60_000, insured: true }] });
+    expect(p.insurancePesewas).toBe(1800);
+  });
+  it("is only for items at or above the threshold", () => {
+    expect(() => ecommerce({ declaredValue: 50_000, insured: true })).toThrow(/GHS 1,000 or more/);
+  });
+  it("reminds the client when a high-value item isn't insured", () => {
+    expect(ecommerce({ declaredValue: 150_000 }).notes.join()).toMatch(/not insured/);
+  });
+  it("promo codes don't reduce the insurance premium", () => {
+    const p = priceBooking({ ...base, service: "ecommerce", now: morning, promo: { id: "p", kind: "percent", value: 50 },
+      stops: [{ weightG: 1500, fragile: false, zoneId: OSU, declaredValue: 200_000, insured: true }] });
+    expect(p).toMatchObject({ discountPesewas: 1250, insurancePesewas: 10_000, totalPesewas: 1250 + 10_000 });
   });
 });
 

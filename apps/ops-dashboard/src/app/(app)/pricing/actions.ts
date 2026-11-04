@@ -75,3 +75,16 @@ export async function setRuleActive(id: string, active: boolean): Promise<Result
   if (!data?.length) return fail("You don't have permission to change this.");
   return done(active ? "Switched on." : "Switched off.");
 }
+
+/** Platform-wide insurance settings (Finance / Super Admin; the database enforces this). */
+export async function saveInsurance(rate: number, thresholdPesewas: number): Promise<Result> {
+  if (!(rate > 0 && rate <= 0.5)) return fail("Premium must be between 0.01% and 50%");
+  if (!(Number.isInteger(thresholdPesewas) && thresholdPesewas > 0)) return fail("Enter the high-value threshold in GHS");
+  const sb = await supabaseServer();
+  for (const [key, value] of [["insurance_rate", rate], ["high_value_threshold", thresholdPesewas]] as const) {
+    const { data, error } = await sb.from("app_settings").update({ value }).eq("key", key).is("city_id", null).select("key");
+    if (error) return fail(error.message);
+    if (!data?.length) return fail("Only Finance or a Super Admin can change insurance.");
+  }
+  return done("Insurance settings saved.");
+}

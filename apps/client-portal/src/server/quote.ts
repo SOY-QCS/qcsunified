@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { BookingRequest, bookingProblems } from "@qcs/types";
 import { NightWindow, priceBooking, PricingError, MissingPriceError, type PricingRuleRow, type PromoCode } from "@qcs/pricing";
+import { DEFAULT_HIGH_VALUE_PESEWAS, DEFAULT_INSURANCE_RATE } from "@qcs/config";
 import { ApiError } from "./supabase";
 import { roadRoute, type LatLng } from "./maps";
 
@@ -38,9 +39,14 @@ export async function buildQuote(body: unknown, deps: QuoteDeps) {
   if (problems.length) throw new ApiError(400, "Some drop-offs can't be delivered", problems);
 
   const now = deps.now ?? new Date();
-  const [rules, cutoff, nightRaw, surgeRaw] = await Promise.all([
+  const [rules, cutoff, nightRaw, surgeRaw, rateRaw, minRaw] = await Promise.all([
     deps.rulesFor(cityId), deps.cityCutoff(cityId), deps.setting("night_window", cityId), deps.setting("surge_multiplier", cityId),
+    deps.setting("insurance_rate", cityId), deps.setting("high_value_threshold", cityId),
   ]);
+  const insurance = {
+    rate: Number.isFinite(Number(rateRaw)) && Number(rateRaw) > 0 ? Number(rateRaw) : DEFAULT_INSURANCE_RATE,
+    minValue: Number.isFinite(Number(minRaw)) && Number(minRaw) > 0 ? Number(minRaw) : DEFAULT_HIGH_VALUE_PESEWAS,
+  };
   const nightWindow = NightWindow.safeParse(nightRaw).success ? NightWindow.parse(nightRaw) : { start: "20:00", end: "06:00" };
   const surge = Math.min(3, Math.max(1, Number(surgeRaw ?? 1) || 1));
 
@@ -52,7 +58,7 @@ export async function buildQuote(body: unknown, deps: QuoteDeps) {
 
   let estimatedRoute = false;
   const stops = await Promise.all(req.dropoffs.map(async (d, i) => {
-    const base = { weightG: d.weight_g, fragile: d.fragile, zoneId: zones[i]!.zone_id };
+    const base = { weightG: d.weight_g, fragile: d.fragile, zoneId: zones[i]!.zone_id, declaredValue: d.item_value, insured: d.insured };
     if (req.service !== "express") return base;
     const r = await deps.route(req.pickup, d);
     estimatedRoute ||= r.estimated;
@@ -62,7 +68,7 @@ export async function buildQuote(body: unknown, deps: QuoteDeps) {
   let price;
   try {
     price = priceBooking({
-      service: req.service, cityId, stops, rules, now, cutoff, nightWindow, surge, promo,
+      service: req.service, cityId, stops, rules, now, cutoff, nightWindow, surge, promo, insurance,
       pickupAt: req.scheduled_at ? new Date(req.scheduled_at) : null,
     });
   } catch (e) {

@@ -6,14 +6,15 @@ import { AddressField, emptyPlace, type PlaceValue } from "./address-field";
 import { api, ApiProblem, ghs, type BookingResult, type QuoteResult } from "./api";
 
 export interface Party { name: string; phone: string }
-interface Stop { place: PlaceValue; recipient: Party; weightKg: string; size: string; fragile: boolean; item: string; valueGhs: string; codGhs: string; instructions: string; ref: string }
-const newStop = (): Stop => ({ place: emptyPlace(), recipient: { name: "", phone: "" }, weightKg: "1", size: "small", fragile: false, item: "", valueGhs: "", codGhs: "", instructions: "", ref: "" });
+interface Stop { place: PlaceValue; recipient: Party; weightKg: string; size: string; fragile: boolean; item: string; valueGhs: string; insured: boolean; codGhs: string; instructions: string; ref: string }
+const newStop = (): Stop => ({ place: emptyPlace(), recipient: { name: "", phone: "" }, weightKg: "1", size: "small", fragile: false, item: "", valueGhs: "", insured: false, codGhs: "", instructions: "", ref: "" });
 const p = (ghsText: string) => Math.round(Number(ghsText || 0) * 100);
 
 export interface VendorInfo { id: string; name: string; accountType: string; pickup: PlaceValue & { contact_name: string; contact_phone: string } | null }
+export interface InsuranceInfo { rate: number; threshold: number }
 
 /** One form for Express (1 drop-off) and e-commerce trips (up to 25 drop-offs). */
-export function BookingForm({ vendor, me }: { vendor: VendorInfo; me: Party }) {
+export function BookingForm({ vendor, me, insurance }: { vendor: VendorInfo; me: Party; insurance: InsuranceInfo }) {
   const router = useRouter();
   const [service, setService] = useState<"ecommerce" | "express">("ecommerce");
   const [pickup, setPickup] = useState<PlaceValue>(vendor.pickup ?? emptyPlace());
@@ -48,7 +49,7 @@ export function BookingForm({ vendor, me }: { vendor: VendorInfo; me: Party }) {
       dropoffs: stops.map((s) => ({
         ...s.place, contact_name: s.recipient.name, contact_phone: s.recipient.phone, instructions: s.instructions || null,
         weight_g: Math.round(Number(s.weightKg || 0) * 1000), size: s.size, fragile: s.fragile, item_description: s.item || null,
-        item_value: p(s.valueGhs), cod_amount: p(s.codGhs), external_ref: s.ref || null,
+        item_value: p(s.valueGhs), insured: s.insured && p(s.valueGhs) >= insurance.threshold, cod_amount: p(s.codGhs), external_ref: s.ref || null,
       })),
     };
   }
@@ -115,6 +116,13 @@ export function BookingForm({ vendor, me }: { vendor: VendorInfo; me: Party }) {
             <div><label>Cash to collect (COD, GHS)</label><input inputMode="decimal" value={s.codGhs} onChange={(e) => setStop(i, { codGhs: e.target.value })} placeholder="0 = none" /></div>
             <div><label>Your order no.</label><input value={s.ref} onChange={(e) => setStop(i, { ref: e.target.value })} /></div>
           </div>
+          {p(s.valueGhs) >= insurance.threshold && (
+            <div className="notice" style={{ color: "var(--text)" }}>
+              <strong>High-value item — insure it?</strong> Add {ghs(Math.round(p(s.valueGhs) * insurance.rate))} ({+(insurance.rate * 100).toFixed(2)}% of the declared value).
+              Insured parcels are refunded in full if damaged or missing.
+              <label style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 600 }}><input type="checkbox" style={{ width: "auto" }} checked={s.insured} onChange={(e) => setStop(i, { insured: e.target.checked })} /> Yes, insure this parcel</label>
+            </div>
+          )}
           <label>Delivery instructions</label><input value={s.instructions} onChange={(e) => setStop(i, { instructions: e.target.value })} placeholder="e.g. Call on arrival, blue gate" />
           <label style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={s.fragile} onChange={(e) => setStop(i, { fragile: e.target.checked })} /> Fragile — handle with care</label>
         </div>
@@ -146,7 +154,7 @@ export function BookingForm({ vendor, me }: { vendor: VendorInfo; me: Party }) {
         <div className="card">
           <strong>Your price</strong>
           {quote.stops.map((st, i) => (
-            <div key={i} className="quote-line"><span>Drop-off {i + 1}: {stops[i]?.recipient.name}</span><span>{ghs(st.netPesewas)}</span></div>
+            <div key={i} className="quote-line"><span>Drop-off {i + 1}: {stops[i]?.recipient.name}{st.insurancePesewas ? ` (incl. insurance ${ghs(st.insurancePesewas)})` : ""}</span><span>{ghs(st.totalPesewas)}</span></div>
           ))}
           {quote.discountPesewas > 0 && <div className="quote-line muted"><span>Promo code</span><span>−{ghs(quote.discountPesewas)}</span></div>}
           <div className="quote-line total"><span>Total</span><span>{ghs(quote.totalPesewas)}</span></div>

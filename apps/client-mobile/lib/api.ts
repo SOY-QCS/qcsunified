@@ -24,8 +24,8 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 export interface QuoteResult {
   quote_id: string; expires_at: string;
-  stops: { feePesewas: number; netPesewas: number; lines: { label: string; pesewas: number }[] }[];
-  subtotalPesewas: number; discountPesewas: number; totalPesewas: number; pickupDate: string | null; notes: string[];
+  stops: { feePesewas: number; netPesewas: number; insurancePesewas: number; totalPesewas: number; lines: { label: string; pesewas: number }[] }[];
+  subtotalPesewas: number; discountPesewas: number; insurancePesewas: number; totalPesewas: number; pickupDate: string | null; notes: string[];
 }
 export interface BookingResult { trip_id: string | null; needs_payment: boolean; total: number; orders: { id: string; tracking_number: string; status: string; fee: number }[] }
 export const ghs = (p: number) => `GHS ${(p / 100).toFixed(2)}`;

@@ -17,6 +17,7 @@ export const BULK_COLUMNS = [
   { key: "fragile", label: "Fragile (yes/no)", required: false, example: "no" },
   { key: "item_description", label: "Item", required: false, example: "2 dresses" },
   { key: "item_value_ghs", label: "Item value (GHS)", required: false, example: "350" },
+  { key: "insure", label: "Insure (yes/no)", required: false, example: "no" },
   { key: "cod_ghs", label: "Cash to collect (GHS)", required: false, example: "350" },
   { key: "instructions", label: "Delivery instructions", required: false, example: "Call on arrival" },
   { key: "order_ref", label: "Your order number", required: false, example: "WC-1043" },
@@ -37,7 +38,7 @@ const ALIASES: Record<string, string> = {
   gps: "ghana_post_gps", digital_address: "ghana_post_gps", gps_address: "ghana_post_gps",
   lat: "latitude", lng: "longitude", lon: "longitude", long: "longitude",
   weight: "weight_kg", kg: "weight_kg", value: "item_value_ghs", item_value: "item_value_ghs",
-  cod: "cod_ghs", cash_on_delivery: "cod_ghs", amount_to_collect: "cod_ghs",
+  insurance: "insure", insured: "insure", cod: "cod_ghs", cash_on_delivery: "cod_ghs", amount_to_collect: "cod_ghs",
   notes: "instructions", note: "instructions", ref: "order_ref", order_number: "order_ref", order_id: "order_ref", item: "item_description",
 };
 export function normaliseHeader(h: string): string {
@@ -94,7 +95,7 @@ export function checkBulkRows(raw: Record<string, unknown>[], rowOffset = 2): Bu
       ghana_post_gps: r.ghana_post_gps || null, landmark: r.landmark || null,
       contact_name: r.recipient_name, contact_phone: r.recipient_phone, instructions: r.instructions || null,
       weight_g: Math.round((kg ?? 0) * 1000), size, fragile: yes(r.fragile), item_description: r.item_description || null,
-      item_value: Math.round((value ?? 0) * 100), cod_amount: Math.round((cod ?? 0) * 100), external_ref: r.order_ref || null,
+      item_value: Math.round((value ?? 0) * 100), insured: yes(r.insure), cod_amount: Math.round((cod ?? 0) * 100), external_ref: r.order_ref || null,
     });
     if (!parsed.success) {
       parsed.error.issues.forEach((iss) => add(String(iss.path[0] ?? ""), iss.message));

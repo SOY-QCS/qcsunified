@@ -18,6 +18,11 @@ select '00000000-0000-0000-0000-000000000104', 'city_admin', id from cities wher
 
 -- ---------- vendor sign-up ----------
 select tests.login('00000000-0000-0000-0000-000000000101');
+select tests.expect_error($$select register_vendor(jsonb_build_object('business_name', 'Kente Hub', 'category', 'fashion', 'city_code', 'ACC', 'id_type', 'ghana_card', 'id_number', 'GHA-1',
+  'pickup', jsonb_build_object('formatted_address', 'Osu', 'lng', -0.178, 'lat', 5.556)))$$, 'terms', 'business sign-up needs the Terms & Conditions accepted');
+select tests.expect_error($$update profiles set terms_accepted_at = now() where id = auth.uid()$$, 'accept_terms', 'terms acceptance cannot be faked');
+select tests.ok(accept_terms() = '2026-11', 'client accepts the current Terms & Conditions');
+select tests.ok((select terms_accepted_at is not null and terms_version = '2026-11' from profiles where id = auth.uid()), 'acceptance time and version recorded');
 select tests.expect_error($$select register_vendor('{"business_name":"","category":"fashion","city_code":"ACC"}')$$, 'business name', 'business name required');
 select tests.expect_error($$select register_vendor('{"business_name":"Kente Hub","category":"fashion","city_code":"ACC","id_type":"ghana_card","id_number":"GHA-1"}')$$, 'pickup address', 'pickup pin required');
 select tests.expect_error($$select register_vendor('{"business_name":"Kente Hub","category":"fashion","city_code":"ACC","id_type":"ghana_card","id_number":"GHA-1","id_doc_path":"someone-else/id.jpg","pickup":{"formatted_address":"Osu","lng":-0.178,"lat":5.556}}')$$, 'own folder', 'ID file must be in own folder');

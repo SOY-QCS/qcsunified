@@ -40,6 +40,7 @@ export const Dropoff = Place.extend({
   fragile: z.boolean().default(false),
   item_description: optionalText(200),
   item_value: z.number().int().min(0).default(0),
+  insured: z.boolean().default(false),
   cod_amount: z.number().int().min(0).default(0),
   external_ref: optionalText(80),
 });

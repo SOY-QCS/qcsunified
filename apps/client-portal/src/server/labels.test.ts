@@ -3,7 +3,7 @@ import { PDFDocument } from "pdf-lib";
 import { labelsPdf, LABEL_SIZES, type LabelOrder } from "./labels";
 
 const order: LabelOrder = {
-  tracking_number: "QCS00100001", service_type: "ecommerce", recipient_name: "Esi Mensah", recipient_phone: "+233241234567",
+  tracking_number: "ACC-202611041301-KUM-02", service_type: "ecommerce", recipient_name: "Esi Mensah", recipient_phone: "+233241234567",
   dropoff_address_text: "House 12, Lagos Avenue, East Legon — behind the big mango tree near the A&C Mall car park entrance",
   dropoff_landmark: "A&C Mall", dropoff_ghana_post_gps: "GA-123-4567", zone_name: "East Legon / Airport", city_name: "Accra",
   sender_name: "Kente Hub", sender_phone: "+233200000202", weight_g: 1500, package_size: "small", is_fragile: true,
@@ -13,7 +13,7 @@ const order: LabelOrder = {
 
 describe("labels", () => {
   it("one page per order at the exact A6 size", async () => {
-    const pdf = await PDFDocument.load(await labelsPdf([order, { ...order, tracking_number: "QCS00100002", cod_amount: 0 }], "a6"));
+    const pdf = await PDFDocument.load(await labelsPdf([order, { ...order, tracking_number: "ACC-202611041301-ACC", cod_amount: 0, is_insured: true }], "a6"));
     expect(pdf.getPageCount()).toBe(2);
     const { width, height } = pdf.getPage(0).getSize();
     expect([Math.round(width), Math.round(height)]).toEqual(LABEL_SIZES.a6.map(Math.round));

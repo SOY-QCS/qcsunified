@@ -112,7 +112,7 @@ export function BulkUpload({ vendor, me }: { vendor: VendorInfo; me: Party }) {
     <>
       <div className="card">
         <strong>1. Your file</strong>
-        <p className="muted">CSV or Excel (.xlsx), one row per parcel. Columns: {BULK_COLUMNS.filter((c) => c.required).map((c) => c.label).join(", ")} (required), plus optional landmark, Ghana Post GPS, latitude/longitude, size, fragile, item, value, cash to collect, instructions and your order number.</p>
+        <p className="muted">CSV or Excel (.xlsx), one row per parcel. Columns: {BULK_COLUMNS.filter((c) => c.required).map((c) => c.label).join(", ")} (required), plus optional landmark, Ghana Post GPS, latitude/longitude, size, fragile, item, value, insure (yes/no — for items of GHS 1,000+, adds 5% of the value), cash to collect, instructions and your order number.</p>
         <a className="btn secondary small" href="/api/v1/bulk-template">Download template</a>
         <input type="file" accept=".csv,.xlsx,.xls" style={{ marginTop: 12 }} onChange={(e) => onFile(e.target.files?.[0])} />
       </div>

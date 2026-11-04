@@ -9,7 +9,7 @@ export default async function Booked({ searchParams }: PageProps<"/booked">) {
   const ids = String(sp.orders ?? "").split(",").filter(Boolean);
   const sb = await supabaseServer();
   const { data: orders } = ids.length
-    ? await sb.from("orders").select("id, tracking_number, recipient_name, dropoff_address_text, quoted_fee, cod_amount, status, pickup_date").in("id", ids)
+    ? await sb.from("orders").select("id, tracking_number, recipient_name, dropoff_address_text, quoted_fee, insurance_premium, cod_amount, status, pickup_date").in("id", ids)
     : { data: [] };
   const list = ids.map((id) => orders?.find((o) => o.id === id)).filter(Boolean) as NonNullable<typeof orders>;
   const all = list.map((o) => o.id).join(",");
@@ -32,7 +32,7 @@ export default async function Booked({ searchParams }: PageProps<"/booked">) {
             <tr key={o.id}>
               <td><strong>{o.tracking_number}</strong></td>
               <td>{o.recipient_name}<br /><span className="muted">{o.dropoff_address_text}</span></td>
-              <td>{ghs(o.quoted_fee)}</td>
+              <td>{ghs(o.quoted_fee + o.insurance_premium)}{o.insurance_premium ? <><br /><span className="tag">Insured</span></> : null}</td>
               <td>{o.cod_amount ? ghs(o.cod_amount) : "—"}</td>
               <td>{STATUS[o.status] ?? o.status}{o.pickup_date ? <><br /><span className="muted">Pickup {o.pickup_date}</span></> : null}</td>
               <td><img src={`/api/v1/qr/${o.tracking_number}.png`} alt={`QR for ${o.tracking_number}`} width={64} height={64} /></td>

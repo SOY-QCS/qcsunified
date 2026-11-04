@@ -2,13 +2,14 @@ import Link from "next/link";
 import type { PricingRuleRow, WeightBand } from "@qcs/pricing";
 import { requireRole } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
-import { CutoffEditor, ExpressEditor, LaneEditor, PromoEditor, ZoneEditor, type ExpressConfig } from "./editors";
+import { CutoffEditor, ExpressEditor, InsuranceEditor, LaneEditor, PromoEditor, ZoneEditor, type ExpressConfig } from "./editors";
 
 const TABS = [
   { id: "express", label: "Express" },
   { id: "ecommerce", label: "E-commerce zones" },
   { id: "intercity", label: "Inter-city lanes" },
   { id: "offers", label: "Flat-rate offers" },
+  { id: "insurance", label: "Insurance" },
 ] as const;
 
 export default async function PricingPage({ searchParams }: PageProps<"/pricing">) {
@@ -20,7 +21,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
     sb.from("zones").select("id, code, name, city_id").order("name"),
     sb.from("hubs").select("id, code, name, city_id").order("name"),
     sb.from("pricing_rules").select("*").order("created_at"),
-    sb.from("app_settings").select("key, city_id, value").in("key", ["surge_multiplier", "night_window"]),
+    sb.from("app_settings").select("key, city_id, value").in("key", ["surge_multiplier", "night_window", "insurance_rate", "high_value_threshold"]),
   ]);
 
   const isGlobal = me.roles.some((r) => r.role === "super_admin" || r.role === "finance");
@@ -72,6 +73,10 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
               config={(r?.config as { bands: WeightBand[]; doorstepFee: number }) ?? null} canEdit />;
           }))}
         </>
+      )}
+
+      {tab === "insurance" && (
+        <InsuranceEditor rate={Number(setting("insurance_rate") ?? 0.05)} threshold={Number(setting("high_value_threshold") ?? 100000)} canEdit={isGlobal} />
       )}
 
       {tab === "offers" && (

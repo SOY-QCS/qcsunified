@@ -8,8 +8,8 @@ import { AddressPicker, emptyPlace, type PlaceValue } from "../../components/add
 import { api, ApiProblem, ghs, type BookingResult, type QuoteResult } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 
-interface Stop { place: PlaceValue; name: string; phone: string; kg: string; size: string; fragile: boolean; item: string; value: string; cod: string; note: string }
-const newStop = (): Stop => ({ place: emptyPlace(), name: "", phone: "", kg: "1", size: "small", fragile: false, item: "", value: "", cod: "", note: "" });
+interface Stop { place: PlaceValue; name: string; phone: string; kg: string; size: string; fragile: boolean; item: string; value: string; insured: boolean; cod: string; note: string }
+const newStop = (): Stop => ({ place: emptyPlace(), name: "", phone: "", kg: "1", size: "small", fragile: false, item: "", value: "", insured: false, cod: "", note: "" });
 const pes = (t: string) => Math.round(Number(t || 0) * 100);
 
 const WHEN = [{ value: "now", label: "Now" }, { value: "1h", label: "In 1 hour" }, { value: "tmr9", label: "Tomorrow 9:00" }, { value: "tmr14", label: "Tomorrow 14:00" }] as const;
@@ -43,6 +43,15 @@ export default function Book() {
   const [quote, setQuote] = useState<QuoteResult | null>(null);
   const [problems, setProblems] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [insurance, setInsurance] = useState({ rate: 0.05, threshold: 100_000 });
+
+  // Insurance rate and threshold are admin settings.
+  useEffect(() => {
+    supabase().from("app_settings").select("key, value").in("key", ["insurance_rate", "high_value_threshold"]).is("city_id", null).then(({ data }) => {
+      const v = (k: string, d: number) => Number(data?.find((x) => x.key === k)?.value ?? d) || d;
+      setInsurance({ rate: v("insurance_rate", 0.05), threshold: v("high_value_threshold", 100_000) });
+    });
+  }, []);
 
   // Businesses start from their saved pickup point.
   useEffect(() => {
@@ -73,7 +82,7 @@ export default function Book() {
       pickup: { ...pickup, contact_name: sender.name, contact_phone: sender.phone, instructions: pickupNote || null },
       dropoffs: stops.map((s) => ({ ...s.place, contact_name: s.name, contact_phone: s.phone, instructions: s.note || null,
         weight_g: Math.round(Number(s.kg || 0) * 1000), size: s.size, fragile: s.fragile, item_description: s.item || null,
-        item_value: pes(s.value), cod_amount: pes(s.cod) })),
+        item_value: pes(s.value), insured: s.insured && pes(s.value) >= insurance.threshold, cod_amount: pes(s.cod) })),
     };
   }
 
@@ -126,6 +135,15 @@ export default function Book() {
             <View style={{ flex: 1 }}><Field label="Weight (kg)" keyboardType="decimal-pad" value={s.kg} onChangeText={(t) => setStop(i, { kg: t })} /></View>
             <View style={{ flex: 1 }}><Field label="Item value (GHS)" keyboardType="decimal-pad" value={s.value} onChangeText={(t) => setStop(i, { value: t })} /></View>
           </View>
+          {pes(s.value) >= insurance.threshold && (
+            <View style={{ backgroundColor: "#fbeee4", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+              <Text style={{ fontWeight: "700" }}>High-value item — insure it?</Text>
+              <Text style={{ color: colors.text, marginTop: 4 }}>Add {ghs(Math.round(pes(s.value) * insurance.rate))} ({+(insurance.rate * 100).toFixed(2)}% of the value). Insured parcels are refunded in full if damaged or missing.</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
+                <Text style={{ fontWeight: "600" }}>Insure this parcel</Text><Switch value={s.insured} onValueChange={(v) => setStop(i, { insured: v })} />
+              </View>
+            </View>
+          )}
           {vendor && <Field label="Cash to collect (COD, GHS)" keyboardType="decimal-pad" value={s.cod} onChangeText={(t) => setStop(i, { cod: t })} placeholder="Leave empty if paid" />}
           <Field label="What's inside (optional)" value={s.item} onChangeText={(t) => setStop(i, { item: t })} />
           <Field label="Delivery instructions (optional)" value={s.note} onChangeText={(t) => setStop(i, { note: t })} placeholder="e.g. Call on arrival" />
@@ -148,7 +166,7 @@ export default function Book() {
       {!quote ? <Button title="Get price" onPress={getPrice} busy={busy} /> : (
         <View style={{ backgroundColor: "#fff", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: "#e6e1da", marginTop: 8 }}>
           {quote.stops.length > 1 && quote.stops.map((st, i) => (
-            <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}><Text>Drop-off {i + 1}</Text><Text>{ghs(st.netPesewas)}</Text></View>
+            <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}><Text>Drop-off {i + 1}{st.insurancePesewas ? " (insured)" : ""}</Text><Text>{ghs(st.totalPesewas)}</Text></View>
           ))}
           {quote.stops.length === 1 && quote.stops[0]!.lines.filter((l) => l.pesewas !== 0).map((l, i) => (
             <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: colors.muted }}>{l.label}</Text><Text style={{ color: colors.muted }}>{ghs(l.pesewas)}</Text></View>

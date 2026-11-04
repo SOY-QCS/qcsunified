@@ -3,14 +3,20 @@
  * Inputs are already-validated booking details plus the facts the server looked up
  * (rules, zones, road distance). Pure: same inputs always give the same price.
  */
-import { applyFlatPromo, promoDiscount, quoteEcommerceStop, quoteExpress, PricingError, type QuoteLine } from "./engine";
+import { applyFlatPromo, insurancePremium, promoDiscount, quoteEcommerceStop, quoteExpress, PricingError, type QuoteLine } from "./engine";
 import { expressRuleFor, flatPromoFor, zoneBandsFor } from "./select";
 import { deliveryDay, isNight } from "./time";
 import type { NightWindow, PricingRuleRow, PromoCode } from "./rules";
 
 export const MAX_BULK_STOPS = 25;
 
-export interface StopInput { weightG: number; fragile: boolean; zoneId: string | null; distanceM?: number; durationS?: number }
+export interface StopInput {
+  weightG: number; fragile: boolean; zoneId: string | null; distanceM?: number; durationS?: number;
+  declaredValue?: number;   // pesewas
+  insured?: boolean;
+}
+/** Insurance settings (admin-editable): offered from `minValue` declared, premium = rate × declared value. */
+export interface InsuranceSettings { rate: number; minValue: number }
 export interface PriceBookingInput {
   service: "express" | "ecommerce";
   cityId: string;
@@ -22,14 +28,19 @@ export interface PriceBookingInput {
   nightWindow: NightWindow;
   surge: number;
   promo?: PromoCode | null;
+  insurance?: InsuranceSettings;
 }
-/** feePesewas = before promo code; netPesewas = what this stop actually costs after the promo code is shared out. */
-export interface StopPrice { feePesewas: number; netPesewas: number; lines: QuoteLine[] }
+/**
+ * feePesewas = delivery fee before promo code; netPesewas = delivery fee after the promo code is shared out;
+ * insurancePesewas = insurance premium (promo codes never reduce it); totalPesewas = net + insurance.
+ */
+export interface StopPrice { feePesewas: number; netPesewas: number; insurancePesewas: number; totalPesewas: number; lines: QuoteLine[] }
 export interface BookingPrice {
   stops: StopPrice[];
-  subtotalPesewas: number;
+  subtotalPesewas: number;      // delivery fees before promo
   discountPesewas: number;
-  totalPesewas: number;
+  insurancePesewas: number;
+  totalPesewas: number;         // what the client pays: delivery after promo + insurance
   pickupDate: string | null;     // e-commerce: the day it will be picked up
   notes: string[];
 }
@@ -53,7 +64,7 @@ export function priceBooking(input: PriceBookingInput): BookingPrice {
     let q = quoteExpress(rule, { distanceM: s.distanceM, durationS: s.durationS, weightG: s.weightG, fragile: s.fragile, night, surge: input.surge });
     const flat = flatPromoFor(rules, input.cityId, s.zoneId, now);
     if (flat) q = applyFlatPromo(q, flat.flatFee, flat.name);
-    priced = [{ feePesewas: q.totalPesewas, netPesewas: q.totalPesewas, lines: q.lines }];
+    priced = [{ feePesewas: q.totalPesewas, netPesewas: q.totalPesewas, insurancePesewas: 0, totalPesewas: q.totalPesewas, lines: q.lines }];
     notes.push("Express price is locked now — traffic won't change it.");
   } else {
     priced = stops.map((s, i) => {
@@ -62,7 +73,7 @@ export function priceBooking(input: PriceBookingInput): BookingPrice {
         let q = quoteEcommerceStop(zoneBandsFor(rules, s.zoneId, now), s.weightG);
         const flat = flatPromoFor(rules, input.cityId, s.zoneId, now);
         if (flat) q = applyFlatPromo(q, flat.flatFee, flat.name);
-        return { feePesewas: q.totalPesewas, netPesewas: q.totalPesewas, lines: q.lines };
+        return { feePesewas: q.totalPesewas, netPesewas: q.totalPesewas, insurancePesewas: 0, totalPesewas: q.totalPesewas, lines: q.lines };
       } catch (e) {
         throw new PricingError(`Drop-off ${i + 1}: ${(e as Error).message}`);
       }
@@ -80,7 +91,28 @@ export function priceBooking(input: PriceBookingInput): BookingPrice {
   const subtotal = priced.reduce((t, s) => t + s.feePesewas, 0);
   const discount = input.promo ? promoDiscount(subtotal, input.promo) : 0;
   shareDiscount(priced, discount, subtotal);
-  return { stops: priced, subtotalPesewas: subtotal, discountPesewas: discount, totalPesewas: subtotal - discount, pickupDate, notes };
+
+  // Insurance on high-value items (added after the promo code, which only applies to delivery fees).
+  const ins = input.insurance ?? { rate: 0.05, minValue: 100_000 };
+  let insuranceTotal = 0, uninsuredHighValue = 0;
+  stops.forEach((s, i) => {
+    const value = s.declaredValue ?? 0;
+    const p = priced[i]!;
+    if (s.insured) {
+      if (value < ins.minValue) throw new PricingError(`Drop-off ${i + 1}: insurance is for items worth GHS ${(ins.minValue / 100).toLocaleString("en-GH")} or more`);
+      p.insurancePesewas = insurancePremium(value, ins.rate);
+      p.lines = [...p.lines, { label: `Insurance (${+(ins.rate * 100).toFixed(2)}% of GHS ${(value / 100).toLocaleString("en-GH")})`, pesewas: p.insurancePesewas }];
+      insuranceTotal += p.insurancePesewas;
+    } else if (value >= ins.minValue) {
+      uninsuredHighValue++;
+    }
+    p.totalPesewas = p.netPesewas + p.insurancePesewas;
+  });
+  if (insuranceTotal) notes.push("Insured parcels are refunded in full if damaged or missing.");
+  if (uninsuredHighValue) notes.push(`${uninsuredHighValue === 1 ? "This item is" : `${uninsuredHighValue} items are`} high value and not insured — add insurance for ${+(ins.rate * 100).toFixed(2)}% of the declared value.`);
+
+  return { stops: priced, subtotalPesewas: subtotal, discountPesewas: discount, insurancePesewas: insuranceTotal,
+           totalPesewas: subtotal - discount + insuranceTotal, pickupDate, notes };
 }
 
 /** Spread a discount across stops in proportion to their fees (each order then shows its own net price). */

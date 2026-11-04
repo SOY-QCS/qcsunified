@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     if (!ids.length) throw new ApiError(400, "Choose at least one order");
     const { data, error } = await me.db.from("orders")
       .select(`id, tracking_number, service_type, recipient_name, recipient_phone, dropoff_address_text, dropoff_landmark, dropoff_ghana_post_gps,
-               pickup_contact_name, pickup_contact_phone, weight_g, package_size, is_fragile, cod_amount, payer, created_at, delivery_instructions,
+               pickup_contact_name, pickup_contact_phone, weight_g, package_size, is_fragile, is_insured, cod_amount, payer, created_at, delivery_instructions,
                external_ref, trip_id, zone:zones!orders_dropoff_zone_id_fkey(name), city:cities(name), vendor:vendors(business_name)`)
       .in("id", ids);
     if (error) throw error;

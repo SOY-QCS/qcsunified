@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  applyFlatPromo, failedOrReturnFee, pinCorrectionExtra, promoDiscount, quoteEcommerceStop, quoteExpress, quoteIntercity,
+  applyFlatPromo, insurancePremium, failedOrReturnFee, pinCorrectionExtra, promoDiscount, quoteEcommerceStop, quoteExpress, quoteIntercity,
   PricingError, cedisToPesewas, formatCedis, type ExpressRule,
 } from "./index";
 
@@ -46,10 +46,13 @@ describe("Inter-city (lane + weight band)", () => {
 });
 
 describe("promos and rules", () => {
-  it("flat-rate promo: customer pays the lower price", () => {
-    const q = { totalPesewas: 4000, lines: [{ label: "x", pesewas: 4000 }] };
-    expect(applyFlatPromo(q, 2500).totalPesewas).toBe(2500);
-    expect(applyFlatPromo({ totalPesewas: 1800, lines: [] }, 2500).totalPesewas).toBe(1800);
+  it("flat-rate offer: exactly the amount set, whether the normal price is higher or lower", () => {
+    expect(applyFlatPromo({ totalPesewas: 4000, lines: [] }, 2500).totalPesewas).toBe(2500);
+    expect(applyFlatPromo({ totalPesewas: 1800, lines: [] }, 2500).totalPesewas).toBe(2500);
+  });
+  it("insurance premium is 5% of the declared value", () => {
+    expect(insurancePremium(120_000, 0.05)).toBe(6000);   // GHS 1,200 → GHS 60
+    expect(insurancePremium(100_001, 0.05)).toBe(5000);
   });
   it("promo codes: percent with cap, fixed, never below zero", () => {
     expect(promoDiscount(10_000, { id: "a", kind: "percent", value: 10 })).toBe(1000);

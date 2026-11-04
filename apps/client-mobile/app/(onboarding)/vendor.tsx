@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Image, Switch, Text, View } from "react-native";
+import { Image, Linking, Switch, Text, View } from "react-native";
 import * as Location from "expo-location";
 import { GhanaPostGps, ID_TYPES, VENDOR_CATEGORIES } from "@qcs/types";
 import { Banner, Button, Choice, Field, Screen, Title, pickPhoto, supabase, uploadKyc, type PickedPhoto } from "@qcs/mobile";
 import { colors } from "@qcs/ui";
 import { useAuth } from "../../lib/auth";
-import { useCities } from "../../lib/cities";
+import { useCities, useTermsUrl } from "../../lib/cities";
 
 type IdType = (typeof ID_TYPES)[number]["value"];
 
@@ -25,6 +25,8 @@ export default function Vendor() {
   const [idNumber, setIdNumber] = useState("");
   const [idPhoto, setIdPhoto] = useState<PickedPhoto | null>(null);
   const [optIn, setOptIn] = useState(false);
+  const [terms, setTerms] = useState(false);
+  const termsUrl = useTermsUrl();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +54,7 @@ export default function Vendor() {
     if (gps && !GhanaPostGps.safeParse(gps).success) return setError("Ghana Post GPS should look like GA-123-4567");
     if (!idType || idNumber.trim().length < 4) return setError("Enter your ID number");
     if (!idPhoto) return setError("Add a photo of your ID");
+    if (!terms) return setError("Please accept the Terms & Conditions");
 
     setBusy(true);
     try {
@@ -59,6 +62,8 @@ export default function Vendor() {
       const sb = supabase();
       const { error: pErr } = await sb.from("profiles").update({ full_name: owner.trim(), marketing_opt_in: optIn }).eq("id", uid);
       if (pErr) throw pErr;
+      const { error: tErr } = await sb.rpc("accept_terms");
+      if (tErr) throw tErr;
       const cityCode = cities.find((c) => c.id === city)!.code;
       const { error: vErr } = await sb.rpc("register_vendor", {
         p: {
@@ -104,6 +109,10 @@ export default function Vendor() {
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginVertical: 12 }}>
         <Text style={{ flex: 1 }}>Send me offers and news from QCS</Text>
         <Switch value={optIn} onValueChange={setOptIn} />
+      </View>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <Text style={{ flex: 1 }}>I agree to the <Text style={{ color: "#b8500f", textDecorationLine: "underline" }} onPress={() => Linking.openURL(termsUrl)}>QCS Terms &amp; Conditions</Text></Text>
+        <Switch value={terms} onValueChange={setTerms} />
       </View>
       <Banner text={error} />
       <Button title="Create business account" onPress={submit} busy={busy} />

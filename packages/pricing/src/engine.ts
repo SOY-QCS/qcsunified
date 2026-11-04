@@ -68,10 +68,14 @@ export function quoteIntercity(lane: IntercityLaneRule, weightG: number, doorste
   return total(lines);
 }
 
-/** A flat-rate promo (e.g. GHS 25 anywhere in Accra) — the customer pays whichever is lower. */
-export function applyFlatPromo(quote: Quote, flatFee: number, name = "Flat-rate offer"): Quote {
-  if (flatFee >= quote.totalPesewas) return quote;
-  return total([...quote.lines, { label: name, pesewas: flatFee - quote.totalPesewas }]);
+/** A flat-rate offer (e.g. GHS 25 anywhere in Accra) replaces the normal price — exactly the amount set, higher or lower. */
+export function applyFlatPromo(_quote: Quote, flatFee: number, name = "Flat-rate offer"): Quote {
+  return total([{ label: name, pesewas: flatFee }]);
+}
+
+/** Insurance for high-value items: a share of the declared value (5% by default), rounded to the pesewa. */
+export function insurancePremium(declaredValuePesewas: number, rate: number): number {
+  return Math.round(declaredValuePesewas * rate);
 }
 
 /** Promo code discount on a subtotal (never more than the subtotal). */

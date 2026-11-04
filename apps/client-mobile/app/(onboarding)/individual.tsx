@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Switch, Text, View } from "react-native";
+import { Linking, Switch, Text, View } from "react-native";
 import { Banner, Button, Choice, Field, Screen, Title, supabase } from "@qcs/mobile";
 import { useAuth } from "../../lib/auth";
-import { useCities } from "../../lib/cities";
+import { useCities, useTermsUrl } from "../../lib/cities";
 
 export default function Individual() {
   const { session, refresh } = useAuth();
@@ -11,6 +11,8 @@ export default function Individual() {
   const [email, setEmail] = useState("");
   const [city, setCity] = useState<string | null>(null);
   const [optIn, setOptIn] = useState(false);
+  const [terms, setTerms] = useState(false);
+  const termsUrl = useTermsUrl();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +21,10 @@ export default function Individual() {
     if (name.trim().length < 2) return setError("Enter your full name");
     if (email && !/^\S+@\S+\.\S+$/.test(email)) return setError("That email doesn't look right");
     if (!city) return setError("Choose your city");
+    if (!terms) return setError("Please accept the Terms & Conditions");
     setBusy(true);
+    const t = await supabase().rpc("accept_terms");
+    if (t.error) { setBusy(false); return setError(t.error.message); }
     const { error } = await supabase().from("profiles")
       .update({ full_name: name.trim(), email: email.trim() || null, city_id: city, marketing_opt_in: optIn })
       .eq("id", session!.user.id);
@@ -37,6 +42,10 @@ export default function Individual() {
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginVertical: 8 }}>
         <Text style={{ flex: 1 }}>Send me offers and news from QCS</Text>
         <Switch value={optIn} onValueChange={setOptIn} />
+      </View>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <Text style={{ flex: 1 }}>I agree to the <Text style={{ color: "#b8500f", textDecorationLine: "underline" }} onPress={() => Linking.openURL(termsUrl)}>QCS Terms &amp; Conditions</Text></Text>
+        <Switch value={terms} onValueChange={setTerms} />
       </View>
       <Banner text={error} />
       <Button title="Done" onPress={save} busy={busy} />

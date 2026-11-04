@@ -60,7 +60,7 @@ select tests.ok((select count(*) from quotes) = 1, 'customer sees their own quot
 select tests.service();
 create temp table r1 as select create_booking('00000000-0000-0000-0000-000000000201', (select qid from b1)) as res;
 select tests.ok((select (res ->> 'needs_payment')::boolean from r1), 'MoMo booking needs payment');
-select tests.ok((select o.status = 'PENDING_PAYMENT' and o.quoted_fee = 3000 and o.tracking_number like 'QCS%' and o.recipient_name = 'Recipient 1'
+select tests.ok((select o.status = 'PENDING_PAYMENT' and o.quoted_fee = 3000 and o.tracking_number ~ '^ACC-[0-9]{12}-ACC$' and o.recipient_name = 'Recipient 1'
                         and o.pickup_instructions = 'Shop 12' and o.delivery_instructions = 'Call on arrival' and o.dropoff_zone_id = (select legon from k)
                  from orders o where o.quote_id = (select qid from b1)), 'express order saved: waiting for payment, fee, tracking number, instructions, zone');
 select tests.expect_error($$select create_booking('00000000-0000-0000-0000-000000000201', (select qid from b1))$$, 'already been booked', 'a quote can only be booked once');
@@ -72,6 +72,24 @@ select tests.ok((select (create_booking('00000000-0000-0000-0000-000000000201', 
 select tests.ok((select round(lat::numeric, 3) = 5.556 and round(lng::numeric, 3) = -0.178 from addresses where user_id = '00000000-0000-0000-0000-000000000201' and label = 'Pickup' limit 1), 'saved addresses have plain lat/lng');
 select tests.ok((select count(*) from addresses where user_id = '00000000-0000-0000-0000-000000000201') = 4, 'pickup and drop-off saved to the customer''s address book');
 
+-- ---------- tracking numbers: pickup city - booking minute (Accra time) - destination city ----------
+select tests.ok((select tracking_code from cities where code = 'KSI') = 'KUM' and (select tracking_code from cities where code = 'TKD') = 'TAK', 'city codes are the first 3 letters (Kumasi = KUM, Takoradi = TAK)');
+select tests.logout();
+insert into orders (id, service_type, city_id, pickup_location, dropoff_location, recipient_name, recipient_phone, weight_g, quoted_fee, payment_method, created_at, dropoff_zone_id)
+select '30000000-0000-0000-0000-000000000201', 'express', acc, st_setsrid(st_makepoint(-0.178, 5.556), 4326)::geography, st_setsrid(st_makepoint(-0.161, 5.635), 4326)::geography,
+       'T1', '+233240000001', 1000, 1000, 'cash', '2026-11-04 13:01:30+00', legon from k;
+select tests.ok((select tracking_number from orders where id = '30000000-0000-0000-0000-000000000201') = 'ACC-202611041301-ACC', 'tracking number like ACC-202611041301-ACC');
+insert into orders (id, service_type, city_id, pickup_location, dropoff_location, recipient_name, recipient_phone, weight_g, quoted_fee, payment_method, created_at, dropoff_zone_id)
+select '30000000-0000-0000-0000-000000000202', 'express', acc, st_setsrid(st_makepoint(-0.178, 5.556), 4326)::geography, st_setsrid(st_makepoint(-0.161, 5.635), 4326)::geography,
+       'T2', '+233240000002', 1000, 1000, 'cash', '2026-11-04 13:01:59+00', legon from k;
+select tests.ok((select tracking_number from orders where id = '30000000-0000-0000-0000-000000000202') = 'ACC-202611041301-ACC-02', 'second parcel on the same route in the same minute gets -02');
+insert into orders (id, service_type, city_id, pickup_location, dropoff_location, recipient_name, recipient_phone, weight_g, quoted_fee, payment_method, created_at,
+                    origin_hub_id, dest_hub_id, intercity_option)
+select '30000000-0000-0000-0000-000000000203', 'intercity', acc, st_setsrid(st_makepoint(-0.178, 5.556), 4326)::geography, st_setsrid(st_makepoint(-1.61, 6.70), 4326)::geography,
+       'T3', '+233240000003', 1000, 1000, 'cash', '2026-11-04 13:01:10+00', (select id from hubs where code = 'ACC-HUB'), (select id from hubs where code = 'KSI-HUB'), 'doorstep' from k;
+select tests.ok((select tracking_number from orders where id = '30000000-0000-0000-0000-000000000203') = 'ACC-202611041301-KUM', 'Accra → Kumasi ends in KUM (separate route, no counter)');
+select tests.service();
+
 -- ---------- vendor bulk trip ----------
 create temp table b2 as select tests.quote('00000000-0000-0000-0000-000000000202', tests.req('vendor_wallet', 'wallet', 3, true), 3, '10000000-0000-0000-0000-000000000201') as qid;
 grant select on b2 to anon, authenticated, service_role;
@@ -82,6 +100,19 @@ select tests.ok((select count(*) from orders where trip_id = (select (res ->> 't
   'wallet orders confirmed with COD and pickup date');
 select tests.ok((select count(*) from addresses where vendor_id = '10000000-0000-0000-0000-000000000201') = 4, 'recipients saved to the vendor''s address book');
 select tests.ok((select bool_and(is_high_value = false) from orders where trip_id = (select (res ->> 'trip_id')::uuid from r2)), 'GHS 350 items are not high value');
+select tests.ok((select count(distinct tracking_number) = 3 and bool_and(tracking_number ~ '^ACC-[0-9]{12}-ACC(-[0-9]{2})?$') from orders where trip_id = (select (res ->> 'trip_id')::uuid from r2)),
+  'three parcels booked in the same second still get three different tracking numbers');
+
+-- insured high-value parcel
+create temp table b4 as select tests.quote('00000000-0000-0000-0000-000000000201',
+  jsonb_set(jsonb_set(tests.req('sender', 'cash', 1), '{dropoffs,0,item_value}', '200000'), '{dropoffs,0,insured}', 'true'), 1) as qid;
+grant select on b4 to anon, authenticated, service_role;
+select tests.logout();
+update quotes set price = jsonb_set(jsonb_set(price, '{stops,0,insurancePesewas}', '10000'), '{stops,0,totalPesewas}', '13000') where id = (select qid from b4);
+select tests.service();
+select create_booking('00000000-0000-0000-0000-000000000201', (select qid from b4));
+select tests.ok((select is_insured and insurance_premium = 10000 and is_high_value and quoted_fee = 3000 from orders where quote_id = (select qid from b4)),
+  'insured GHS 2,000 item: premium GHS 100 saved separately from the GHS 30 delivery fee, marked high value');
 
 select tests.expect_error($$select create_booking('00000000-0000-0000-0000-000000000202', tests.quote('00000000-0000-0000-0000-000000000202', tests.req('vendor_wallet', 'wallet', 2, true), 2, '10000000-0000-0000-0000-000000000201'))$$,
   'already booked: order number(s) wc-1, wc-2', 'uploading the same order numbers again is refused in plain words');

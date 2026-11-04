@@ -119,7 +119,7 @@ e-commerce zone prices, inter-city lanes, flat-rate offers and the same-day cut-
 **How a booking works**
 1. The app or portal sends the booking details to `POST /api/v1/quotes` (business portal server).
 2. The server checks them, finds each drop-off's zone, gets the motorbike road distance for Express (Google Routes API), prices it with `packages/pricing` and saves a **quote locked for 15 minutes**.
-3. `POST /api/v1/bookings` with the quote id creates the orders (and a bulk trip with stops), tracking numbers (`QCS00100001`), and saves every address to the address book.
+3. `POST /api/v1/bookings` with the quote id creates the orders (and a bulk trip with stops), tracking numbers (`ACC-202611041301-KUM`: pickup city, booking time, destination city), and saves every address to the address book.
 4. Labels: `GET /api/v1/labels?orders=…&size=a6|4x6` → printable PDF with QR code.
 
 **Bulk upload:** Business portal → Bulk upload. Template at `/api/v1/bulk-template`. CSV or .xlsx; every row is
@@ -129,3 +129,12 @@ checked, problems listed by row with a downloadable error report; more than 25 r
 (× 1.35 at 22 km/h), address search shows saved addresses only, and bulk rows need latitude/longitude.
 
 **Tests:** `pnpm test` (pricing 31, booking rules 39, quote + labels 11), `pnpm db:test` (157 checks).
+
+### Tracking numbers, insurance and terms
+- **Tracking number** = pickup city code - booking time (Accra, to the minute) - destination city code, e.g. `ACC-202611041301-KUM`.
+  City codes are the first 3 letters of the name (Accra ACC, Kumasi KUM, Takoradi TAK, Tamale TAM) and can be changed in `cities.tracking_code` if two cities clash.
+  A second parcel on the same route in the same minute gets `-02`, `-03`… so numbers never repeat.
+- **Flat-rate offers** charge exactly the amount set.
+- **Insurance**: items declared at GHS 1,000+ are offered insurance at 5% of the declared value (both editable in Pricing → Insurance by Finance).
+  Insured parcels are refunded in full if damaged or missing. The premium is kept separate from the delivery fee (`orders.insurance_premium`) and promo codes never reduce it.
+- **Terms & Conditions**: clients tick "I agree" at sign-up (app and portal); `accept_terms()` records the version and time. Set the real link in `app_settings.terms_url`.

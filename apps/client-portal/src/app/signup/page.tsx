@@ -14,8 +14,12 @@ export default function Signup() {
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [termsUrl, setTermsUrl] = useState("#");
 
-  useEffect(() => { sb.from("cities").select("id, code, name").order("name").then(({ data }) => setCities(data ?? [])); }, [sb]);
+  useEffect(() => {
+    sb.from("cities").select("id, code, name").order("name").then(({ data }) => setCities(data ?? []));
+    sb.from("app_settings").select("value").eq("key", "terms_url").is("city_id", null).maybeSingle().then(({ data }) => data?.value && setTermsUrl(String(data.value)));
+  }, [sb]);
 
   function locate() {
     setError(null);
@@ -46,6 +50,8 @@ export default function Signup() {
     if (up.error) { setBusy(false); return setError(`Upload failed: ${up.error.message}`); }
 
     await sb.from("profiles").update({ full_name: get("owner"), marketing_opt_in: f.get("opt_in") === "on" }).eq("id", user.id);
+    const terms = await sb.rpc("accept_terms");
+    if (terms.error) { setBusy(false); return setError(terms.error.message); }
     const { error } = await sb.rpc("register_vendor", { p: {
       business_name: get("business"), category: get("category"), city_code: get("city"), contact_email: get("email") || null,
       id_type: get("id_type"), id_number: get("id_number"), id_doc_path: path,
@@ -85,6 +91,8 @@ export default function Signup() {
         </div>
         <label htmlFor="id_file">Photo or PDF of the ID</label><input id="id_file" name="id_file" type="file" accept="image/jpeg,image/png,application/pdf" required />
         <label style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 400 }}><input type="checkbox" name="opt_in" style={{ width: "auto" }} /> Send me offers and news from QCS</label>
+        <label style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 400 }}><input type="checkbox" name="terms" required style={{ width: "auto" }} />
+          <span>I agree to the <a href={termsUrl} target="_blank" rel="noreferrer">QCS Terms &amp; Conditions</a></span></label>
         {error && <p className="error">{error}</p>}
         <button className="btn block" disabled={busy}>{busy ? "Creating…" : "Create business account"}</button>
       </form>

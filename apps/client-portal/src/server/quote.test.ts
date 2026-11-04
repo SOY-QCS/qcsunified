@@ -58,6 +58,12 @@ describe("quote", () => {
     expect(e?.status).toBe(400);
     expect(e?.details).toEqual(expect.arrayContaining([expect.stringMatching(/^Pickup:/), expect.stringMatching(/^Drop-off 1:/)]));
   });
+  it("insurance uses the admin settings", async () => {
+    const d = deps({ setting: async (k) => (k === "insurance_rate" ? 0.04 : k === "high_value_threshold" ? 100_000 : undefined) });
+    const q = await buildQuote({ ...express, dropoffs: [{ ...drop, item_value: 150_000, insured: true }] }, d);
+    expect(q.insurancePesewas).toBe(6000);
+    expect(q.totalPesewas).toBe(1000 + 3000 + 600 + 6000);
+  });
   it("estimated distance is disclosed", async () => {
     const q = await buildQuote(express, deps({ route: async () => ({ distanceM: 5000, durationS: 900, estimated: true }) }));
     expect(q.notes.join()).toMatch(/estimated/);

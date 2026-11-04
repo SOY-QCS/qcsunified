@@ -29,6 +29,7 @@ export interface LabelOrder {
   weight_g: number;
   package_size: string | null;
   is_fragile: boolean;
+  is_insured?: boolean;
   cod_amount: number;
   payer: string;
   created_at: string;
@@ -87,10 +88,14 @@ export async function labelsPdf(orders: LabelOrder[], size: LabelSize): Promise<
     page.drawImage(img, { x: pad, y, width: qrSize, height: qrSize });
     const tx = pad + qrSize + 4 * MM;
     text("Tracking no.", tx, H - 17 * MM, 8, regular, GREY);
-    text(o.tracking_number, tx, H - 23 * MM, 15, bold);
+    // shrink the tracking number until it fits next to the QR code
+    let tSize = 15;
+    while (tSize > 8 && bold.widthOfTextAtSize(o.tracking_number, tSize) > W - tx - pad) tSize -= 0.5;
+    text(o.tracking_number, tx, H - 23 * MM, tSize, bold);
     if (o.stop_no && o.stop_count) text(`Stop ${o.stop_no} of ${o.stop_count}`, tx, H - 29 * MM, 10, bold);
     text(`${(o.weight_g / 1000).toFixed(1)} kg${o.package_size ? ` · ${o.package_size}` : ""}`, tx, H - 35 * MM, 9);
-    if (o.is_fragile) text("FRAGILE", tx, H - 41 * MM, 11, bold, ORANGE);
+    const tags = [o.is_fragile ? "FRAGILE" : null, o.is_insured ? "INSURED" : null].filter(Boolean).join("  ");
+    if (tags) text(tags, tx, H - 41 * MM, 11, bold, ORANGE);
     if (o.external_ref) text(`Ref: ${o.external_ref}`, tx, H - 46 * MM, 8, regular, GREY);
 
     // recipient
