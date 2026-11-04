@@ -153,3 +153,5 @@ CRM details (confirmed, all editable in admin):
 - All money stored as integer pesewas. All times stored UTC, displayed Africa/Accra.
 - Seed data for Accra, Kumasi, Takoradi, Tamale zones.
 - Every phase ends with: migrations, RLS policies, seed data, tests, and a short README section explaining how to run it.
+- Location storage: keep one "latest position" row per rider (updated on each ping, used for dispatch and live maps); store job-time pings as trip history; delete idle pings after 7 days. This keeps the database small and cheap at 10,000+ deliveries/day.
+- Rider app background location uses an Android foreground-service notification ("QCS is tracking your trip"). Google Play and Apple require a written justification for background location at app submission.
