@@ -1,6 +1,6 @@
 -- Test helpers (included by each test file inside its transaction).
 create schema tests;
-grant usage on schema tests to anon, authenticated;
+grant usage on schema tests to anon, authenticated, service_role;
 
 -- Act as a signed-in user (or anon when p_user is null).
 create function tests.login(p_user uuid) returns void language plpgsql as $$
@@ -37,5 +37,12 @@ end $$;
 -- Number of rows a statement changed (0 = RLS silently blocked it).
 create function tests.rows(p_sql text) returns bigint language plpgsql as $$
 declare n bigint; begin execute p_sql; get diagnostics n = row_count; return n; end $$;
-grant execute on all functions in schema tests to anon, authenticated;
+grant execute on all functions in schema tests to anon, authenticated, service_role;
 
+-- Act as our booking server (service-role key).
+create function tests.service() returns void language plpgsql as $$
+begin
+  perform set_config('role', 'service_role', true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+end $$;
+grant execute on function tests.service() to anon, authenticated;
