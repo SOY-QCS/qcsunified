@@ -61,3 +61,10 @@ Pricing rules (confirmed):
 - Mid-trip changes when the client already paid upfront: the extra amount is collected on delivery, and the client chooses either a Hubtel MoMo/card prompt or cash to the rider.
 - Failed and returned deliveries are charged 50% of the original delivery fee.
 The pricing engine lives in `packages/pricing` and is the ONLY place prices are calculated. Always show the client an estimated quote before they confirm.
+
+### 6. Dispatch rules
+- Express: offer the job to the nearest available, online, eligible rider. Rider has 20 seconds to accept/reject; on reject/timeout offer the next nearest. After N rejections (configurable) escalate to a dispatcher.
+- A rider can hold ONE active job (either an Express job or a Bulk trip) and must complete it before receiving another.
+- Bulk trips: capped by stop count (max 25). Stop order is dynamic — the app always suggests the nearest undelivered stop next; rider can re-order.
+- Dispatchers can manually assign, reassign, split or merge trips from the dashboard.
+- Rider eligibility filters: city, vehicle type, max weight, cash float limit for COD, rider rating, documents valid.
