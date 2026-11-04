@@ -118,3 +118,9 @@ Address confirmation timing (confirmed):
 - Express: dispatch immediately; the confirmation link is sent at the same time. If the recipient corrects the pin, the rider's route updates automatically.
 - E-commerce/Bulk and Inter-city: wait for confirmation until the trip is planned (normally the city's same-day cut-off). Unconfirmed stops are flagged to dispatch, who can call the recipient or send anyway.
 - Recipient pin corrections on Express: if the correction moves the drop-off more than 1 km, the price is recalculated and the sender is notified; the difference is collected like any mid-trip change (Hubtel MoMo/card prompt or cash to rider). Corrections of 1 km or less keep the quoted price.
+
+### 11. Hubs, inter-city & fulfilment
+- Hubs per city with staff, opening hours, address, capacity.
+- Hub scanning: every parcel gets a QR label; hub handlers scan IN, sort to outbound bag/manifest, scan OUT (in the Rider app's Hub mode, see section 4).
+- Manifests for inter-city line-haul (vehicle, driver, seal number, parcel list), with arrival scan at destination hub.
+- Fulfilment: vendor inventory per hub (SKU, qty, location), stock in/out, low-stock alerts, pick-pack for orders.
