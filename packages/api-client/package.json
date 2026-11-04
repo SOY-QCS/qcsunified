@@ -1,0 +1,11 @@
+{
+  "name": "@qcs/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": { "@supabase/supabase-js": "^2.118.0", "@qcs/types": "workspace:*" },
+  "devDependencies": { "typescript": "^5" }
+}

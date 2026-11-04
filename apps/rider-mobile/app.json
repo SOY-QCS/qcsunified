@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "QCS Rider",
+    "slug": "qcs-rider-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "gh.qcs.rider"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#df6518",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "gh.qcs.rider"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "qcs-rider"
+  }
+}
