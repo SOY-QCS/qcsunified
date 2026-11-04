@@ -10,3 +10,4 @@ dist/
 supabase/.temp/
 supabase/.branches/
 .DS_Store
+supabase/functions/deno.lock

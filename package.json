@@ -11,7 +11,8 @@
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
-    "db:test": "bash supabase/tests/run.sh"
+    "db:test": "bash supabase/tests/run.sh",
+    "functions:test": "cd supabase/functions && deno test --allow-env tests/"
   },
   "devDependencies": {
     "supabase": "^3.0.0",
