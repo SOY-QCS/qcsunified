@@ -84,10 +84,11 @@ Lifecycle details (confirmed):
 - Hub collection (inter-city "hub-to-hub pickup"): ARRIVED_DEST_HUB → READY_FOR_COLLECTION → COLLECTED. The recipient is notified when the parcel is ready and shows the OTP at the hub to collect.
 - Payment step: only orders paid upfront by card/MoMo go through PENDING_PAYMENT. Corporate (invoiced), COD, recipient-pays and vendor-wallet orders go straight from DRAFT to CONFIRMED.
 - Bulk trips have two levels: the trip has its own status (ASSIGNED → IN_PROGRESS → COMPLETED), and each order in the trip keeps its own full status. One failed stop does not fail the trip.
-- Proof of delivery: every delivery (and hub collection) requires BOTH a 4-digit OTP sent to the recipient by SMS/WhatsApp AND the recipient's signature on the rider's screen. A photo is optional.
+- Proof of delivery: see section 8 (OTP + signature by default; also applies to hub collection).
 - If the recipient cannot give the OTP (e.g. no phone), the rider requests an override; Customer Support or a Dispatcher approves it with a required photo + note. Every override is written to the audit log.
 
 ### 8. Proof of delivery
-- 4-digit delivery code sent to recipient (SMS/WhatsApp); rider must enter it to complete — OR recipient signature on screen — OR photo, configurable per vendor.
+- Default for every order: the rider must enter the 4-digit delivery code sent to the recipient (SMS/WhatsApp) AND capture the recipient's signature on screen.
+- Vendors can only make it stricter, never weaker: e.g. also require a photo, or turn on the pickup code. They cannot drop below OTP + signature.
 - Separate pickup code for high-value items.
-- Geofence check: rider must be within X metres of drop-off to mark delivered (admin override with reason).
+- Geofence check: rider must be within 3 km of the drop-off to mark delivered (radius editable in admin; admin override with reason, written to the audit log).
