@@ -31,6 +31,11 @@ It is QCS's own operations platform (not SaaS). QCS fleet riders AND independent
 
 ### 4. User roles
 Client side: Individual customer; Vendor owner; Vendor staff (sub-users with permissions); Corporate account (monthly invoicing).
-Rider side: QCS fleet rider; Independent/commission rider; Hub handler.
-Ops side: Super Admin; Regional/City Admin (sees only their city); Dispatcher; Hub Manager; Finance; Customer Support; Read-only Analyst.
+Rider side: QCS fleet rider; Independent/commission rider.
+Ops side: Super Admin; Regional/City Admin (sees only their city); Dispatcher; Hub Manager; Hub Handler (scans parcels in/out using the Ops dashboard); Finance; Customer Support; Read-only Analyst.
 Every action that changes money, status or permissions is written to an audit log (who, what, before, after, when).
+
+Corporate invoicing rules:
+- Corporate accounts are invoiced monthly.
+- An automatic reminder (email + SMS/WhatsApp) is sent 7 days after an invoice is issued if it is still unpaid.
+- Credit limit: unpaid invoices may not exceed 2 months. If an account has unpaid invoices older than 2 months, new bookings are blocked until it pays (Finance can override, logged in the audit log).
