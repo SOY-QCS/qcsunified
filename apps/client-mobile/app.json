@@ -23,6 +23,25 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "scheme": "qcs-client"
+    "scheme": "qcs-client",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "QCS uses your camera to photograph your ID for verification.",
+          "photosPermission": "QCS needs your photos to upload your ID document."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "QCS uses your location to set your pickup point on the map."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
   }
 }

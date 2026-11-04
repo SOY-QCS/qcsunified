@@ -47,3 +47,36 @@ export const GhanaPostGps = z
 
 /** Ghana phone number in international format, e.g. +233241234567. */
 export const GhanaPhone = z.string().regex(/^\+233\d{9}$/, "Use +233 followed by 9 digits");
+
+export * from "./roles";
+
+/** Normalise any Ghana phone format to +233XXXXXXXXX; null if invalid. */
+export function normalizeGhanaPhone(input: string): string | null {
+  const digits = input.replace(/[^\d]/g, "");
+  let local: string;
+  if (digits.startsWith("233") && digits.length === 12) local = digits.slice(3);
+  else if (digits.startsWith("0") && digits.length === 10) local = digits.slice(1);
+  else if (digits.length === 9) local = digits;
+  else return null;
+  if (!/^[235]\d{8}$/.test(local)) return null;
+  return `+233${local}`;
+}
+
+export const VENDOR_CATEGORIES = [
+  "Fashion & clothing", "Electronics & phones", "Food & groceries", "Beauty & cosmetics", "Pharmacy & health",
+  "Home & furniture", "Books & stationery", "Restaurant", "Wholesale / distribution", "Other",
+] as const;
+
+export const ID_TYPES = [
+  { value: "ghana_card", label: "Ghana Card" },
+  { value: "business_registration", label: "Business registration certificate" },
+  { value: "passport", label: "Passport" },
+  { value: "drivers_license", label: "Driver's licence" },
+] as const;
+
+export const MOMO_NETWORKS = ["MTN", "Telecel", "AirtelTigo"] as const;
+
+export const VEHICLE_TYPES = [
+  { value: "bike", label: "Motorbike" }, { value: "ebike", label: "Electric bike" },
+  { value: "tricycle", label: "Tricycle (aboboyaa)" }, { value: "car", label: "Car" }, { value: "van", label: "Van" },
+] as const;

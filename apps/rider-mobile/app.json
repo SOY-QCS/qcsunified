@@ -23,6 +23,16 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "scheme": "qcs-rider"
+    "scheme": "qcs-rider",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "QCS Rider uses your camera to photograph your documents, your vehicle and parcels.",
+          "photosPermission": "QCS Rider needs your photos to upload your documents."
+        }
+      ]
+    ]
   }
 }
