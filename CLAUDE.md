@@ -103,6 +103,7 @@ Lifecycle details (confirmed):
 
 Money details (confirmed):
 - COD payout: vendors receive the full COD amount collected. QCS delivery fees are billed separately (charged to the vendor wallet or invoiced), never deducted from COD.
+- Unpaid vendor fees: if a vendor's fees are more than 7 days overdue, the system holds their next COD payout until the fees are settled. The vendor is notified; Finance can release the hold (written to the audit log).
 - Rider COD remittance: riders must remit all COD cash by end of day. If they miss the deadline or reach their cash float limit, they receive no new COD jobs until they remit.
 - Client wallet refunds: a client can request their wallet balance back; it is refunded to MoMo via Hubtel disbursement, to the same MoMo number used to top up (fraud protection).
 - Legal check before launch: confirm with a lawyer and Hubtel that the wallets comply with Bank of Ghana e-money rules (Payment Systems and Services Act, 2019).
