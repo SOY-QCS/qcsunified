@@ -38,6 +38,12 @@
         {
           "locationWhenInUsePermission": "QCS uses your location to set your pickup point on the map."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#df6518"
+        }
       ]
     ],
     "experiments": {

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Banner, Button, Screen, Title } from "@qcs/mobile";
+import { Banner, Button, Screen, Title, supabase } from "@qcs/mobile";
 import { colors } from "@qcs/ui";
-import { isOpenStop, navigationUrl, suggestedRoute } from "@qcs/types";
+import { PICKUP_RATING_TAGS, isOpenStop, navigationUrl, suggestedRoute } from "@qcs/types";
 import { useJob, type JobOrder } from "../../lib/job";
 import { here, startTracking } from "../../lib/location";
 import { act } from "../../lib/queue";
@@ -20,6 +20,7 @@ export default function JobScreen() {
   const [scanning, setScanning] = useState(false);
   const [msg, setMsg] = useState<{ text: string; kind: "error" | "info" | "success" } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [rateIds, setRateIds] = useState<string[]>([]);
 
   useEffect(() => { startTracking(true); here().then(setPos); const t = setInterval(() => here().then(setPos), 20_000); return () => clearInterval(t); }, []);
   useEffect(() => { if (!loading && !job) router.replace("/home"); }, [loading, job, router]);
@@ -83,11 +84,12 @@ export default function JobScreen() {
                 ))}
                 <Button title="Scan parcel labels" kind="secondary" onPress={() => setScanning(true)} />
                 <Button title={allConfirmed ? "Picked up — start deliveries" : "Confirm every parcel first"} disabled={!allConfirmed} busy={busy}
-                  onPress={async () => { await move(atPickup, "PICKED_UP"); await move(atPickup, "IN_TRANSIT"); }} />
+                  onPress={async () => { const ids = atPickup.map((o) => o.id); await move(atPickup, "PICKED_UP"); await move(atPickup, "IN_TRANSIT"); setRateIds(ids); }} />
               </>}
         </View>
       ) : (
         <>
+          {rateIds.length > 0 && <RatePickup ids={rateIds} onDone={() => setRateIds([])} />}
           <Text style={{ fontSize: 18, fontWeight: "800", marginBottom: 8 }}>Drop-offs — nearest first</Text>
           {route.map((o, i) => (
             <Pressable key={o.id} onPress={() => router.push({ pathname: "/deliver", params: { id: o.id } })}
@@ -106,5 +108,33 @@ export default function JobScreen() {
       <Button title="Refresh" kind="secondary" onPress={refresh} />
       <Scanner visible={scanning} onScan={scanned} onClose={() => setScanning(false)} />
     </Screen>
+  );
+}
+
+/** Quick rating of the pickup (was the parcel ready, easy to find, well packed?). Optional; skipped when offline. */
+function RatePickup({ ids, onDone }: { ids: string[]; onDone: () => void }) {
+  const [score, setScore] = useState(0);
+  const [tags, setTags] = useState<string[]>([]);
+  const options = score >= 4 ? PICKUP_RATING_TAGS.good : score ? PICKUP_RATING_TAGS.bad : [];
+  async function send() {
+    await Promise.all(ids.map((id) => supabase().rpc("rate_pickup", { p_order: id, p_score: score, p_tags: tags }).then(() => undefined, () => undefined)));
+    onDone();
+  }
+  return (
+    <View style={{ backgroundColor: "#fff", borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: "#e6e1da" }}>
+      <Text style={{ fontWeight: "800" }}>How was the pickup?</Text>
+      <View style={{ flexDirection: "row" }}>
+        {[1, 2, 3, 4, 5].map((n) => <Pressable key={n} onPress={() => { setScore(n); setTags([]); }} style={{ padding: 4 }} accessibilityLabel={`${n} stars`}>
+          <Text style={{ fontSize: 32, color: n <= score ? colors.primary : "#ccc" }}>★</Text></Pressable>)}
+      </View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+        {options.map((t) => <Pressable key={t} onPress={() => setTags((x) => (x.includes(t) ? x.filter((y) => y !== t) : [...x, t]))}
+          style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 16, borderWidth: 1, borderColor: "#e6e1da", backgroundColor: tags.includes(t) ? "#fbeee4" : "#fff" }}><Text>{t}</Text></Pressable>)}
+      </View>
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <View style={{ flex: 1 }}><Button title="Skip" kind="secondary" onPress={onDone} /></View>
+        <View style={{ flex: 1 }}><Button title="Send" onPress={send} disabled={!score} /></View>
+      </View>
+    </View>
   );
 }

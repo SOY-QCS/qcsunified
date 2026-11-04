@@ -47,6 +47,12 @@
         {
           "cameraPermission": "QCS Rider uses the camera to scan parcel labels and photograph deliveries."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#df6518"
+        }
       ]
     ]
   }

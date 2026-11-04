@@ -221,3 +221,53 @@ Background location and the foreground notification need a development build
 `supabase/tests/50_dispatch.sql` (nearest rider, cascade, escalation, one-job rule, codes, COD,
 offline replay, WhatsApp, overrides), `packages/types/src/rider.test.ts` (stop ordering, offline
 queue) and `supabase/functions/tests/` (WhatsApp signature check, Google ranking).
+
+## Phase 6 — Live tracking and notifications
+
+**Tracking.** Anyone with a tracking number sees the status and history at `/track/<number>` on the
+website. The map, rider (first name, photo, plate, rating, Call / WhatsApp) and arrival estimate
+appear after typing the **last 4 digits of the recipient's phone** — or straight away for the signed-in
+sender (client app, business portal → Orders → tracking number). 10 wrong guesses lock the details
+for an hour. The rider's number is shown only while they are on the way. Screens refresh every
+10 seconds, which matches how often riders send their position. Arrival times are estimated for free
+(straight-line distance × 1.4 at 20 km/h, editable).
+
+**Recipient confirms the address.** On booking, the recipient gets an SMS link to `/c/<code>` on the
+website (no login). They tap "Yes, this is correct" or drag the pin / use their location and add a
+landmark. Express pins moved more than 1 km are re-priced by the pricing engine; the sender is told the
+extra, collected on delivery. The rider's route updates automatically. Bulk/inter-city stops still
+unconfirmed are listed on Ops → Dispatch.
+
+**Notifications.** Every status change queues messages automatically:
+- *Sender:* app notification + WhatsApp by default; SMS and email if they switch them on (Client app → Notification settings).
+- *Recipient:* SMS (or WhatsApp, or both — Ops → Messages).
+- Delivery codes and price changes are always sent.
+Ops → **Messages** shows every message's wording (Super Admin can edit), recipient channels, and what
+was sent or failed recently. The `send-notifications` Edge Function delivers them (Expo push, Hubtel
+SMS, WhatsApp template, Resend email), retries failures 3 times, and wipes delivery codes once sent.
+
+**Ratings.** After delivery the sender rates the rider (1–5 stars + quick tags); the rider's rating is the
+average of their last 100. 1–2 stars alert Support. Riders rate the pickup right after collecting.
+
+### Going live
+1. **Sender schedule** (SQL editor, after deploying `send-notifications` and setting `NOTIFY_SECRET`):
+   ```sql
+   select vault.create_secret('<NOTIFY_SECRET>', 'notify_secret');
+   select cron.schedule('send-notifications', '10 seconds', $$
+     select net.http_post('https://<project>.supabase.co/functions/v1/send-notifications',
+       headers := jsonb_build_object('x-qcs-secret',
+         (select decrypted_secret from vault.decrypted_secrets where name = 'notify_secret')))
+     where exists (select 1 from public.notifications where status = 'queued' and next_attempt_at <= now())$$);
+   update public.app_settings set value = '"https://<your website>"' where key = 'public_site_url';
+   ```
+2. **Push:** run `eas init` in each phone app once (gives the project id push needs). Push doesn't work in Expo Go.
+3. **WhatsApp templates:** in Meta Business → WhatsApp → Message templates, create `qcs_rider_assigned`,
+   `qcs_delivered`, `qcs_failed_attempt`, `qcs_address_confirm`, `qcs_on_the_way` (category *Utility*) with the
+   wording shown on Ops → Messages, each `{{…}}` replaced by `{{1}}`, `{{2}}`… in order.
+4. **Maps:** enable *Maps JavaScript API* and set `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` (restrict to your sites).
+   Without it, pages show an "Open in Google Maps" link instead of a map.
+
+### Tests
+`supabase/tests/60_tracking_notifications.sql` (fan-out, preferences, privacy of tracking, brute-force lock,
+pin correction, sender worker, ratings), `supabase/functions/tests/send-notifications.test.ts`,
+`apps/client-portal/src/server/tracking.test.ts` (re-pricing a moved pin), `packages/types/src/tracking.test.ts`.

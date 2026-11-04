@@ -5,7 +5,22 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "scripts": { "typecheck": "tsc --noEmit" },
-  "dependencies": { "@qcs/config": "workspace:*" },
-  "devDependencies": { "typescript": "^5" }
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@qcs/config": "workspace:*",
+    "@qcs/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@types/react": "^19"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./web": "./src/web/index.ts"
+  },
+  "peerDependencies": {
+    "react": "*"
+  }
 }

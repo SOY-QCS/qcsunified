@@ -18,7 +18,9 @@
     "expo-image-manipulator": "*",
     "expo-image-picker": "*",
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "expo-notifications": "*",
+    "expo-constants": "*"
   },
   "devDependencies": {
     "@types/react": "~19.3.0",

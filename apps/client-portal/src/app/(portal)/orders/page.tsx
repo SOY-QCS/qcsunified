@@ -17,7 +17,7 @@ export default async function Orders() {
           {(orders ?? []).map((o) => (
             <tr key={o.id}>
               <td>{new Date(o.created_at).toLocaleDateString("en-GB", { timeZone: "Africa/Accra" })}</td>
-              <td><strong>{o.tracking_number}</strong><br /><span className="muted">{o.service_type}</span></td>
+              <td><a href={`/orders/${o.tracking_number}`}><strong>{o.tracking_number}</strong></a><br /><span className="muted">{o.service_type}</span></td>
               <td>{o.external_ref ?? "—"}</td>
               <td>{o.recipient_name}<br /><span className="muted">{o.dropoff_address_text}</span></td>
               <td>{ghs(o.quoted_fee)}</td>

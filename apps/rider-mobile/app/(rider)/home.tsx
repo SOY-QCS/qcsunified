@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Banner, Button, Screen, Title, supabase } from "@qcs/mobile";
+import { Banner, Button, Screen, Title, onNotificationTap, registerForPush, supabase, unregisterPush } from "@qcs/mobile";
 import { colors } from "@qcs/ui";
 import type { Queue } from "@qcs/types";
 import { useAuth } from "../../lib/auth";
@@ -21,7 +21,11 @@ export default function Home() {
   const { job, refresh: refreshJob } = useJob();
   const { offer, refresh: refreshOffer } = useOffer(me, online && !job);
 
+  const pushToken = useRef<string | null>(null);
   useEffect(() => onQueue(setQ), []);
+  // Job offers also arrive by push, so the phone rings even when the app is in the background.
+  useEffect(() => { registerForPush("rider").then((t) => { pushToken.current = t; }); }, []);
+  useEffect(() => onNotificationTap(() => { refreshOffer(); refreshJob(); }), [refreshOffer, refreshJob]);
   useEffect(() => {
     supabase().from("riders").select("is_online, score, offers_received, offers_accepted, cod_float_balance").eq("id", me).single()
       .then(({ data }) => setOnline(!!data?.is_online));
@@ -67,7 +71,7 @@ export default function Home() {
       {job && <Button title="Open my current job" onPress={() => router.push("/job")} />}
       {online && !offer && !job && <Text style={{ color: colors.muted, marginTop: 16, textAlign: "center" }}>Waiting for a job…</Text>}
       <View style={{ flex: 1 }} />
-      <Button title="Sign out" kind="secondary" onPress={async () => { if (online) await toggle(false); await supabase().auth.signOut(); }} />
+      <Button title="Sign out" kind="secondary" onPress={async () => { if (online) await toggle(false); await unregisterPush(pushToken.current); await supabase().auth.signOut(); }} />
     </Screen>
   );
 }

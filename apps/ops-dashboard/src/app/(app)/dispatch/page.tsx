@@ -14,12 +14,15 @@ const one = <T,>(x: T | T[] | null | undefined): T | null => (Array.isArray(x) ?
 export default async function Dispatch() {
   await requireRole(["super_admin", "city_admin", "dispatcher", "support"]);
   const sb = await supabaseServer();
-  const [{ data: trips }, { data: riders }, { data: overrides }, { data: flagged }] = await Promise.all([
+  const [{ data: trips }, { data: riders }, { data: overrides }, { data: flagged }, { data: unconfirmed }] = await Promise.all([
     sb.from("trips").select("id, trip_type, dispatch_state, dispatch_misses, escalated_at, escalation_reason, dispatch_started_at, cod_total, orders(tracking_number)")
       .in("dispatch_state", ["escalated", "queued", "offering"]).order("escalated_at", { ascending: true, nullsFirst: false }).limit(100),
     sb.from("riders").select("id, score, is_online, profiles(full_name, phone)").eq("status", "active").eq("is_online", true).limit(300),
     sb.from("pod_overrides").select("id, reason, photo_path, created_at, orders(tracking_number), riders(profiles(full_name))").eq("status", "pending").order("created_at"),
     sb.from("orders").select("id, tracking_number, pod_flagged, pod_method, delivered_at").not("pod_flagged", "is", null).order("delivered_at").limit(100),
+    sb.from("orders").select("id, tracking_number, recipient_name, recipient_phone, dropoff_address_text, status, service_type")
+      .in("address_confirmation", ["pending", "unconfirmed"]).in("service_type", ["ecommerce", "intercity"])
+      .in("status", ["CONFIRMED", "SEARCHING_RIDER", "ASSIGNED", "RIDER_AT_PICKUP", "PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY"]).order("created_at").limit(100),
   ]);
   // Riders already on a job can't take another (one-active-job rule), so leave them out of the list.
   const { data: busy } = await sb.from("trips").select("rider_id").in("status", ["ASSIGNED", "IN_PROGRESS"]);
@@ -87,6 +90,19 @@ export default async function Dispatch() {
             </tr>
           ))}
           {!overrides?.length && <tr><td colSpan={5} className="muted">None.</td></tr>}
+        </tbody>
+      </table>
+
+      <h2>Addresses not confirmed ({unconfirmed?.length ?? 0})</h2>
+      <p className="muted">The recipient hasn&apos;t confirmed their pin yet (bulk and inter-city). Call them, or send anyway.</p>
+      <table>
+        <thead><tr><th>Parcel</th><th>Recipient</th><th>Address</th><th>Status</th></tr></thead>
+        <tbody>
+          {(unconfirmed ?? []).map((o) => (
+            <tr key={o.id}><td>{o.tracking_number}</td><td>{o.recipient_name}<br /><a href={`tel:${o.recipient_phone}`}>{o.recipient_phone}</a></td>
+              <td>{o.dropoff_address_text}</td><td>{o.status.replaceAll("_", " ").toLowerCase()}</td></tr>
+          ))}
+          {!unconfirmed?.length && <tr><td colSpan={4} className="muted">None.</td></tr>}
         </tbody>
       </table>
 

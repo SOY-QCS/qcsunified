@@ -456,3 +456,6 @@ verify_jwt = false
 # Called by the dispatch schedule with a shared secret header.
 [functions.dispatch-rank]
 verify_jwt = false
+
+[functions.send-notifications]
+verify_jwt = false   # called by our schedule with its own secret

@@ -1,12 +1,17 @@
 import { colors } from "@qcs/ui";
+import { Shell } from "./shell";
 
 export default function Home() {
   return (
-    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: colors.background }}>
-      <div style={{ textAlign: "center" }}>
-        <h1 style={{ color: colors.primary }}>QCS Ghana</h1>
-        <p style={{ color: colors.muted }}>Foundations ready. Screens come in later phases.</p>
-      </div>
-    </main>
+    <Shell>
+      <h1 style={{ color: colors.primary }}>Quality Courier Services</h1>
+      <p>Same-day delivery in Accra, Kumasi, Takoradi and Tamale, and parcels between 20+ cities.</p>
+      <h2>Track a parcel</h2>
+      <form action="/track/go" method="get" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <input name="tn" required placeholder="Tracking number" style={{ flex: 1, minWidth: 200, padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid #ccc" }} />
+        <button style={{ padding: "12px 18px", borderRadius: 10, border: 0, background: colors.primary, color: "#fff", fontWeight: 800 }}>Track</button>
+      </form>
+      <p style={{ color: colors.muted, marginTop: 24 }}>Rate calculator, hub pages and rider sign-up come in a later phase.</p>
+    </Shell>
   );
 }

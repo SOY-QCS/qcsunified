@@ -46,6 +46,7 @@ export default function Booked() {
             <Text style={{ fontWeight: "800", fontSize: 17 }}>{o.tracking_number}</Text>
             <Text style={{ color: colors.muted }}>{ghs(o.fee)}</Text>
           </View>
+          <Button title="Track" kind="secondary" onPress={() => router.push({ pathname: "/track", params: { tn: o.tracking_number } })} />
         </View>
       ))}
       <Text style={{ fontWeight: "700", marginTop: 12 }}>Total: {ghs(r.total ?? 0)}</Text>

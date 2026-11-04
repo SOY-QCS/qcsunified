@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Banner, Button, Screen, Title, supabase } from "@qcs/mobile";
+import { Banner, Button, Screen, Title, onNotificationTap, registerForPush, supabase, unregisterPush } from "@qcs/mobile";
 import { colors } from "@qcs/ui";
 import { useAuth } from "../../lib/auth";
 
@@ -17,6 +17,13 @@ export default function Home() {
   const vendor = account?.vendor;
   const [mode, setMode] = useState<"business" | "personal">(vendor ? "business" : "personal");
   const first = (account?.profile?.full_name ?? "").split(" ")[0];
+  const pushToken = useRef<string | null>(null);
+
+  // Delivery updates by push; tapping one opens that parcel's tracking.
+  useEffect(() => { registerForPush("client").then((t) => { pushToken.current = t; }); }, []);
+  useEffect(() => onNotificationTap((d) => {
+    if (typeof d.tracking_number === "string") router.push({ pathname: "/track", params: { tn: d.tracking_number } });
+  }), [router]);
 
   return (
     <Screen>
@@ -34,9 +41,10 @@ export default function Home() {
         <Button title="Book a delivery" onPress={() => router.push({ pathname: "/book", params: { mode } })} />
       </View>
       {mode === "personal" && <Button title="My wallet & invite friends" kind="secondary" onPress={() => router.push("/wallet")} />}
-      <Text style={{ color: colors.muted, marginTop: 8 }}>Live tracking arrives in the next update.</Text>
+      <Button title="My deliveries & tracking" kind="secondary" onPress={() => router.push("/orders")} />
+      <Button title="Notification settings" kind="secondary" onPress={() => router.push("/settings")} />
       <View style={{ flex: 1 }} />
-      <Button title="Sign out" kind="secondary" onPress={() => supabase().auth.signOut()} />
+      <Button title="Sign out" kind="secondary" onPress={async () => { await unregisterPush(pushToken.current); await supabase().auth.signOut(); }} />
     </Screen>
   );
 }
