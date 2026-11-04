@@ -28,3 +28,9 @@ It is QCS's own operations platform (not SaaS). QCS fleet riders AND independent
 - Email: Resend.
 - Hosting: Vercel (web), EAS Build/Submit (mobile), Supabase cloud.
 - Language: TypeScript everywhere. Validation with Zod. Tests with Vitest + Playwright (web) + Maestro (mobile smoke tests).
+
+### 4. User roles
+Client side: Individual customer; Vendor owner; Vendor staff (sub-users with permissions); Corporate account (monthly invoicing).
+Rider side: QCS fleet rider; Independent/commission rider; Hub handler.
+Ops side: Super Admin; Regional/City Admin (sees only their city); Dispatcher; Hub Manager; Finance; Customer Support; Read-only Analyst.
+Every action that changes money, status or permissions is written to an audit log (who, what, before, after, when).
