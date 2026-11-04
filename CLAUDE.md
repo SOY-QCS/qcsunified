@@ -117,3 +117,4 @@ Address confirmation timing (confirmed):
 - The confirmation link opens a simple page on the public website: no login, no app download.
 - Express: dispatch immediately; the confirmation link is sent at the same time. If the recipient corrects the pin, the rider's route updates automatically.
 - E-commerce/Bulk and Inter-city: wait for confirmation until the trip is planned (normally the city's same-day cut-off). Unconfirmed stops are flagged to dispatch, who can call the recipient or send anyway.
+- Recipient pin corrections on Express: if the correction moves the drop-off more than 1 km, the price is recalculated and the sender is notified; the difference is collected like any mid-trip change (Hubtel MoMo/card prompt or cash to rider). Corrections of 1 km or less keep the quoted price.
