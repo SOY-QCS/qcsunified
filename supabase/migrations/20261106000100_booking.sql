@@ -237,3 +237,10 @@ end $$;
 revoke execute on function public.set_city_cutoff(uuid, time) from public, anon;
 grant execute on function public.set_city_cutoff(uuid, time) to authenticated;
 create trigger audit_cities after update on public.cities for each row execute function public.audit_row();
+
+grant execute on function public.check_promo(text, uuid, public.service_type, uuid) to service_role;
+
+-- Plain latitude/longitude next to the map point, so apps can read saved addresses easily.
+alter table public.addresses
+  add column lat double precision generated always as (st_y(location::geometry)) stored,
+  add column lng double precision generated always as (st_x(location::geometry)) stored;

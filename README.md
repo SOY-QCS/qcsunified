@@ -109,3 +109,23 @@ pnpm db:test          # 119 database checks
 pnpm --filter @qcs/ops-dashboard build && pnpm --filter @qcs/ops-dashboard start &
 pnpm --filter @qcs/ops-dashboard e2e   # browser smoke test of login pages
 ```
+
+## Phase 3 — Pricing and booking
+
+**Where prices come from:** `packages/pricing` (the only place prices are calculated) using the rules admins edit in
+**Ops dashboard → Pricing**: Express fees, weight surcharges, fragile/night surcharges, surge and night hours,
+e-commerce zone prices, inter-city lanes, flat-rate offers and the same-day cut-off per city.
+
+**How a booking works**
+1. The app or portal sends the booking details to `POST /api/v1/quotes` (business portal server).
+2. The server checks them, finds each drop-off's zone, gets the motorbike road distance for Express (Google Routes API), prices it with `packages/pricing` and saves a **quote locked for 15 minutes**.
+3. `POST /api/v1/bookings` with the quote id creates the orders (and a bulk trip with stops), tracking numbers (`QCS00100001`), and saves every address to the address book.
+4. Labels: `GET /api/v1/labels?orders=…&size=a6|4x6` → printable PDF with QR code.
+
+**Bulk upload:** Business portal → Bulk upload. Template at `/api/v1/bulk-template`. CSV or .xlsx; every row is
+checked, problems listed by row with a downloadable error report; more than 25 rows are split into trips of 25.
+
+**Without Google keys** (local testing) the system still works: distances are estimated from a straight line
+(× 1.35 at 22 km/h), address search shows saved addresses only, and bulk rows need latitude/longitude.
+
+**Tests:** `pnpm test` (pricing 31, booking rules 39, quote + labels 11), `pnpm db:test` (157 checks).

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { Banner, Button, Screen, Title, supabase } from "@qcs/mobile";
 import { colors } from "@qcs/ui";
 import { useAuth } from "../../lib/auth";
@@ -12,6 +13,7 @@ const KYC_TEXT: Record<string, { text: string; kind: "info" | "success" | "error
 
 export default function Home() {
   const { account } = useAuth();
+  const router = useRouter();
   const vendor = account?.vendor;
   const [mode, setMode] = useState<"business" | "personal">(vendor ? "business" : "personal");
   const first = (account?.profile?.full_name ?? "").split(" ")[0];
@@ -27,9 +29,11 @@ export default function Home() {
       )}
       {vendor && mode === "business" && KYC_TEXT[vendor.kyc_status] && <Banner text={KYC_TEXT[vendor.kyc_status]!.text} kind={KYC_TEXT[vendor.kyc_status]!.kind} />}
       <View style={{ backgroundColor: "#fff", borderRadius: 14, padding: 18, marginVertical: 12, borderWidth: 1, borderColor: "#e6e1da" }}>
-        <Text style={{ fontSize: 18, fontWeight: "700" }}>Book a delivery</Text>
-        <Text style={{ color: colors.muted, marginTop: 6 }}>Booking, tracking and your wallet arrive in the next update.</Text>
+        <Text style={{ fontSize: 18, fontWeight: "700" }}>Send a parcel</Text>
+        <Text style={{ color: colors.muted, marginTop: 6 }}>{mode === "business" ? "Express now, or an e-commerce trip with up to 25 drop-offs." : "Express delivery anywhere in the city."}</Text>
+        <Button title="Book a delivery" onPress={() => router.push({ pathname: "/book", params: { mode } })} />
       </View>
+      <Text style={{ color: colors.muted }}>Tracking and your wallet arrive in the next update.</Text>
       <View style={{ flex: 1 }} />
       <Button title="Sign out" kind="secondary" onPress={() => supabase().auth.signOut()} />
     </Screen>

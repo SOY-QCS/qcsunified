@@ -69,6 +69,7 @@ select tests.expect_error($$select create_booking('00000000-0000-0000-0000-00000
   'expired', 'expired quotes are refused');
 select tests.ok((select (create_booking('00000000-0000-0000-0000-000000000201', tests.quote('00000000-0000-0000-0000-000000000201', tests.req('sender', 'cash', 1), 1))
                  -> 'orders' -> 0 ->> 'status')) = 'CONFIRMED', 'cash booking is confirmed straight away');
+select tests.ok((select round(lat::numeric, 3) = 5.556 and round(lng::numeric, 3) = -0.178 from addresses where user_id = '00000000-0000-0000-0000-000000000201' and label = 'Pickup' limit 1), 'saved addresses have plain lat/lng');
 select tests.ok((select count(*) from addresses where user_id = '00000000-0000-0000-0000-000000000201') = 4, 'pickup and drop-off saved to the customer''s address book');
 
 -- ---------- vendor bulk trip ----------

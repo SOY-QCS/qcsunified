@@ -70,3 +70,15 @@ th { background: #faf8f5; font-weight: 600; }
   .main { padding: 16px; }
   table { display: block; overflow-x: auto; }
 }
+
+/* portal */
+.topbar { display: flex; align-items: center; gap: 14px; padding: 12px 20px; background: #fff; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.topbar nav { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+.topbar nav a { padding: 7px 12px; border-radius: 8px; text-decoration: none; color: var(--text); }
+.topbar nav a[aria-current="page"] { background: #fbeee4; color: var(--qcs-orange-dark); font-weight: 700; }
+.suggest { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 8px; border-radius: 6px; cursor: pointer; font: inherit; }
+.suggest:hover { background: #faf5ef; }
+.stop { border-left: 4px solid var(--qcs-orange); }
+.quote-line { display: flex; justify-content: space-between; padding: 4px 0; }
+.total { font-size: 1.4rem; font-weight: 800; }
+.bad td { background: #fdecea; }
