@@ -68,3 +68,9 @@ The pricing engine lives in `packages/pricing` and is the ONLY place prices are 
 - Bulk trips: capped by stop count (max 25). Stop order is dynamic — the app always suggests the nearest undelivered stop next; rider can re-order.
 - Dispatchers can manually assign, reassign, split or merge trips from the dashboard.
 - Rider eligibility filters: city, vehicle type, max weight, cash float limit for COD, rider rating, documents valid.
+
+Dispatch details (confirmed):
+- Finding the nearest rider: shortlist the 5 closest eligible riders by straight-line distance (PostGIS, free), then rank that shortlist by road travel time with one Google Distance Matrix call.
+- Bulk next-stop suggestion uses straight-line distance (no Google cost).
+- Escalation default: N = 5 rejections/timeouts (about 2 minutes), then the job goes to a dispatcher. Editable in admin.
+- Rejections and timeouts count against the rider's score, which is used for rewards. Rider acceptance rate is tracked and shown on the rider profile.
