@@ -112,3 +112,8 @@ Money details (confirmed):
 - Google Places autocomplete + pin drop + Ghana Post GPS code + landmark/description field + recipient phone.
 - Address confirmation flow: after booking, recipient gets a WhatsApp/SMS link to confirm or correct their pin before dispatch. Unconfirmed addresses are flagged to dispatch.
 - Saved addresses and address book for vendors (repeat customers).
+
+Address confirmation timing (confirmed):
+- The confirmation link opens a simple page on the public website: no login, no app download.
+- Express: dispatch immediately; the confirmation link is sent at the same time. If the recipient corrects the pin, the rider's route updates automatically.
+- E-commerce/Bulk and Inter-city: wait for confirmation until the trip is planned (normally the city's same-day cut-off). Unconfirmed stops are flagged to dispatch, who can call the recipient or send anyway.
