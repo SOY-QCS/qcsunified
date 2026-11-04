@@ -145,3 +145,11 @@ CRM details (confirmed, all editable in admin):
 - Churn alert: flag a vendor when this week's volume is 30% or more below their 4-week average.
 - Support SLA: first reply within 1 hour, resolved within 24 hours (working hours). Tickets about COD money or lost/damaged parcels are top priority.
 - Broadcasts: marketing messages only go to users who opted in (tick box at sign-up); every message has an unsubscribe option. WhatsApp marketing uses Meta-approved templates.
+
+### 13. Non-functional
+- Target 10,000+ deliveries/day; design indexes and Realtime channels accordingly.
+- Rider app must work on low-end Android (2 GB RAM), poor network: queue status updates offline and sync later; compress photos.
+- Location pings every 10–15 s while on a job, every 60 s while online and idle, none while offline.
+- All money stored as integer pesewas. All times stored UTC, displayed Africa/Accra.
+- Seed data for Accra, Kumasi, Takoradi, Tamale zones.
+- Every phase ends with: migrations, RLS policies, seed data, tests, and a short README section explaining how to run it.
