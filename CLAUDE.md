@@ -92,3 +92,11 @@ Lifecycle details (confirmed):
 - Vendors can only make it stricter, never weaker: e.g. also require a photo, or turn on the pickup code. They cannot drop below OTP + signature.
 - Separate pickup code for high-value items.
 - Geofence check: rider must be within 3 km of the drop-off to mark delivered (radius editable in admin; admin override with reason, written to the audit log).
+
+### 9. Money
+- Client wallet (top-up via Hubtel) + pay per order.
+- Vendor wallet with statements: deliveries charged, COD collected, COD remitted, fees, balance; downloadable PDF/CSV statement by date range.
+- COD reconciliation: rider → cash collected → remitted to QCS (MoMo or cash at hub) → paid out to vendor on schedule (daily/weekly).
+- Rider earnings: fixed pickup fee + fixed per-successful-delivery/stop fee (QCS fleet) OR commission % (independent riders); bonuses, deductions, cash-float tracking. Weekly payout via Hubtel; rider can request instant cash-out (fee configurable).
+- Corporate accounts: monthly invoice with credit limit (see the corporate invoicing rules in section 4).
+- Promo codes, referral credits, refunds — all through the wallet ledger. Ledger is double-entry; balances are never edited directly.
