@@ -79,3 +79,10 @@ Dispatch details (confirmed):
 DRAFT → PENDING_PAYMENT → CONFIRMED → SEARCHING_RIDER → ASSIGNED → RIDER_AT_PICKUP → PICKED_UP → IN_TRANSIT → (AT_HUB → DEPARTED_HUB → ARRIVED_DEST_HUB → OUT_FOR_DELIVERY for inter-city) → ARRIVED_AT_DROPOFF → DELIVERED
 Exception branches: CANCELLED, FAILED_ATTEMPT (reason required), RESCHEDULED, RETURNING_TO_SENDER, RETURNED, LOST/DAMAGED (claim opened).
 Every transition stores timestamp, actor, GPS point, and optional photo/note. Clients and vendors get notified on key transitions. Vendors' webhook URLs receive every transition.
+
+Lifecycle details (confirmed):
+- Hub collection (inter-city "hub-to-hub pickup"): ARRIVED_DEST_HUB → READY_FOR_COLLECTION → COLLECTED. The recipient is notified when the parcel is ready and shows the OTP at the hub to collect.
+- Payment step: only orders paid upfront by card/MoMo go through PENDING_PAYMENT. Corporate (invoiced), COD, recipient-pays and vendor-wallet orders go straight from DRAFT to CONFIRMED.
+- Bulk trips have two levels: the trip has its own status (ASSIGNED → IN_PROGRESS → COMPLETED), and each order in the trip keeps its own full status. One failed stop does not fail the trip.
+- Proof of delivery: every delivery (and hub collection) requires BOTH a 4-digit OTP sent to the recipient by SMS/WhatsApp AND the recipient's signature on the rider's screen. A photo is optional.
+- If the recipient cannot give the OTP (e.g. no phone), the rider requests an override; Customer Support or a Dispatcher approves it with a required photo + note. Every override is written to the audit log.
