@@ -7,9 +7,17 @@
 -- =====================================================================
 
 -- Our own database functions can switch on "system" mode for a single step (see submit_rider_application).
+-- System mode is a counter, so a database function that switches it on and off
+-- inside another one that also needs it doesn't switch it off too early.
+create or replace function public._sys(p_delta int) returns void
+language sql as $$
+  select set_config('qcs.system', greatest(0, coalesce(nullif(current_setting('qcs.system', true), '')::int, 0) + p_delta)::text, true);
+$$;
+revoke execute on function public._sys(int) from public, anon, authenticated;
+
 create or replace function public.is_trusted() returns boolean
 language sql stable as $$
-  select coalesce(current_setting('qcs.system', true), '') = 'on'
+  select coalesce(nullif(current_setting('qcs.system', true), '')::int, 0) > 0
       or coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role', 'trusted')
          in ('service_role', 'trusted');
 $$;
@@ -216,14 +224,14 @@ begin
   if not exists (select 1 from public.rider_documents where rider_id = uid and doc_type = 'photo') then missing := array_append(missing, 'your photo'::text); end if;
   if cardinality(missing) > 0 then raise exception 'Please upload: %', array_to_string(missing, ', '); end if;
 
-  perform set_config('qcs.system', 'on', true);   -- this function is allowed to set the status
+  perform public._sys(1);   -- this function is allowed to set the status
   update public.riders
      set status = 'pending', submitted_at = now(), city_id = v_city, vehicle_id = veh,
          rider_type = coalesce(p ->> 'rider_type', rider_type::text)::public.rider_type,
          payout_momo_number = p #>> '{momo,number}', payout_momo_network = p #>> '{momo,network}',
          review_note = null
    where id = uid;
-  perform set_config('qcs.system', 'off', true);
+  perform public._sys(-1);
   return 'pending';
 end $$;
 

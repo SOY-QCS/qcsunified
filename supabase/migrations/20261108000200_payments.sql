@@ -243,7 +243,7 @@ begin
     return 'settled';
   end if;
 
-  perform set_config('qcs.system', 'on', true);
+  perform public._sys(1);
   for it in select * from public.payment_items where payment_id = pay.id loop
     select * into o from public.orders where id = it.order_id for update;
     if o.status = 'PENDING_PAYMENT' then
@@ -262,7 +262,7 @@ begin
         jsonb_build_object('wallet_id', cust, 'amount', it.amount)), o.id, p_txn);
     end if;
   end loop;
-  perform set_config('qcs.system', 'off', true);
+  perform public._sys(-1);
   return 'settled';
 end $$;
 
@@ -274,10 +274,10 @@ begin
   select * into pay from public.payments where client_reference = p_ref for update;
   if not found or pay.state = 'paid' then return; end if;
   update public.payments set state = 'failed', failure_reason = p_reason where id = pay.id;
-  perform set_config('qcs.system', 'on', true);
+  perform public._sys(1);
   update public.orders o set payment_status = 'failed'
    where o.id in (select order_id from public.payment_items where payment_id = pay.id) and o.status = 'PENDING_PAYMENT';
-  perform set_config('qcs.system', 'off', true);
+  perform public._sys(-1);
 end $$;
 
 -- Unpaid card/MoMo orders are cancelled after the timeout (default 60 min).
@@ -302,7 +302,7 @@ create or replace function public._charge_booking(p_quote uuid) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare o public.orders; credit_w uuid; cash_w uuid; vendor_w uuid; due bigint; from_credit bigint; from_cash bigint; avail bigint;
 begin
-  perform set_config('qcs.system', 'on', true);
+  perform public._sys(1);
   for o in select * from public.orders where quote_id = p_quote order by created_at, id for update loop
     if o.payer = 'sender' and o.payment_method = 'wallet' then
       credit_w := public.wallet_for('customer_credit', o.customer_id);
@@ -329,7 +329,7 @@ begin
         jsonb_build_object('wallet_id', public.sys_wallet('INSURANCE_PREMIUMS'), 'amount', o.insurance_premium)), o.id);
     end if;
   end loop;
-  perform set_config('qcs.system', 'off', true);
+  perform public._sys(-1);
 end $$;
 revoke execute on function public._charge_booking(uuid) from public, anon, authenticated;
 
@@ -367,7 +367,7 @@ declare
   fee bigint; rate numeric;
 begin
   if new.status = old.status then return new; end if;
-  perform set_config('qcs.system', 'on', true);
+  perform public._sys(1);
 
   -- Delivered: vendor wallet pays the delivery fee now (per successful delivery).
   if new.status in ('DELIVERED', 'COLLECTED') and new.payer = 'vendor_wallet' and new.fees_charged = 0 then
@@ -409,7 +409,7 @@ begin
     perform public._reward_referral(new.customer_id, new.id);
   end if;
 
-  perform set_config('qcs.system', 'off', true);
+  perform public._sys(-1);
   return new;
 end $$;
 
@@ -427,9 +427,9 @@ begin
     raise exception 'You can refund up to GHS % on this order', to_char((paid - o.refunded_amount) / 100.0, 'FM999,990.00');
   end if;
   perform set_config('qcs.audit_reason', p_reason, true);
-  perform set_config('qcs.system', 'on', true);
+  perform public._sys(1);
   perform public._refund_to_payer(o, p_amount, 'refund', 'Refund ' || o.tracking_number || ': ' || p_reason);
-  perform set_config('qcs.system', 'off', true);
+  perform public._sys(-1);
   insert into public.audit_log (actor_id, action, table_name, record_id, before, after, reason)
   values (auth.uid(), 'REFUND', 'orders', o.id::text, jsonb_build_object('refunded_amount', o.refunded_amount),
           jsonb_build_object('refunded_amount', o.refunded_amount + p_amount), p_reason);
@@ -486,9 +486,9 @@ begin
   if ref.id is null then raise exception 'That referral code isn''t valid'; end if;
   if ref.id = me.id then raise exception 'You can''t use your own code'; end if;
   if exists (select 1 from public.orders where customer_id = me.id) then raise exception 'Referral codes are for new customers, before their first delivery'; end if;
-  perform set_config('qcs.system', 'on', true);
+  perform public._sys(1);
   update public.profiles set referred_by = ref.id where id = me.id;
-  perform set_config('qcs.system', 'off', true);
+  perform public._sys(-1);
   return coalesce(nullif(ref.full_name, ''), 'your friend');
 end $$;
 revoke execute on function public.apply_referral(text) from public, anon;

@@ -244,6 +244,8 @@ select tests.expect_error($$insert into orders (service_type, city_id, vendor_id
 insert into trips (id, trip_type, status, city_id) select '20000000-0000-0000-0000-000000000003', 'express', 'PLANNED', acc from ids;
 update orders set trip_id = '20000000-0000-0000-0000-000000000003' where id = '30000000-0000-0000-0000-000000000001';
 select tests.expect_error($$update orders set trip_id = '20000000-0000-0000-0000-000000000003' where id = '30000000-0000-0000-0000-000000000005'$$, 'one order', 'express trip holds one order');
+select tests.ok((select status = 'COMPLETED' from trips where id = '20000000-0000-0000-0000-000000000001'), 'trip completes when all its parcels are delivered');
+update trips set rider_id = '00000000-0000-0000-0000-000000000011', status = 'ASSIGNED' where id = '20000000-0000-0000-0000-000000000002';
 select tests.expect_error($$update trips set rider_id = '00000000-0000-0000-0000-000000000011', status = 'ASSIGNED' where id = '20000000-0000-0000-0000-000000000003'$$, 'trips_one_active_per_rider', 'rider cannot hold two active jobs');
 
 -- =====================================================================

@@ -38,9 +38,9 @@ end $$;
 create function tests.walk(p_order uuid, p_path text[]) returns void language plpgsql as $$
 declare s text;
 begin
-  perform set_config('qcs.system', 'on', true);
+  perform set_config('qcs.system', '1', true);
   update orders set pod_otp_verified_at = now(), pod_signature_path = 'sig.png' where id = p_order;
-  perform set_config('qcs.system', 'off', true);
+  perform set_config('qcs.system', '0', true);
   foreach s in array p_path loop
     perform transition_order(p_order, s::order_status, null, null, null, null, case when s = 'FAILED_ATTEMPT' then 'No answer' end);
   end loop;
