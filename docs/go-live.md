@@ -32,40 +32,47 @@ Suggested addresses: `qcsghana.com` (website), `portal.qcsghana.com` (business p
 ## 1. Supabase project
 
 1. supabase.com → **New project**: name `qcs-live` (or `qcs-staging`), a strong database password (save it in your password manager), and the region closest to Ghana that Supabase offers.
-2. **Database → Extensions:** turn on **postgis**, **pg_cron** and **pg_net**, *before* step 2.
-3. **Authentication → Sign In / Providers → Phone:** turn on. **Authentication → Hooks → Send SMS hook:** point it at the `send-sms-hook` Edge Function (step 3) and copy the hook secret (used as `SEND_SMS_HOOK_SECRET` in step 3).
+2. Nothing to switch on by hand: the setup turns on PostGIS, pg_cron and pg_net itself (step 2).
+3. **Authentication → Sign In / Providers → Phone:** turn on. **Authentication → Hooks → Send SMS hook** (after step 2): choose *HTTPS*, address `https://<project-ref>.supabase.co/functions/v1/send-sms-hook`, and generate the secret (used as `SEND_SMS_HOOK_SECRET` in step 3).
 4. **Authentication → Rate Limits:** SMS sent per hour = **1000**.
 5. **Authentication → URL Configuration:** Site URL = the portal address; add the dashboard address and `<dashboard>/auth/callback` to Redirect URLs.
 6. **Staging only:** in Authentication → Phone → *Test phone numbers and OTPs*, add the test numbers (e.g. `233200000001=123456`).
 
-## 2. Database
+## 2. Database and Edge Functions: the Deploy button
 
-From your computer, in the project folder:
+Everything runs on GitHub; nothing to install on your computer.
 
-```bash
-npx supabase login
-npx supabase link --project-ref <project-ref>        # the id in the project's address
-npx supabase db push                                  # builds every table, rule and function
-psql "<connection string>" -f supabase/seed.sql       # starting cities, zones, hubs, prices
-```
+1. **One access key for the repository:** supabase.com → your avatar → **Account → Access tokens → Generate new token**, named "GitHub deploy". Then in GitHub: the repository → **Settings → Secrets and variables → Actions → New repository secret**, name `SUPABASE_ACCESS_TOKEN`, paste the token.
+2. **One GitHub environment per Supabase project:** the repository → **Settings → Environments → New environment**, named `staging` (later `live`). In it:
+   - **Environment variable** `SUPABASE_PROJECT_REF`: the id in the project's address (`https://<project-ref>.supabase.co`; also under Project settings → General).
+   - **Environment secret** `SUPABASE_DB_PASSWORD`: the database password from step 1.1. Forgot it? Project settings → Database → Reset database password.
+   - For `live`, tick **Required reviewers** and add yourself, so nothing reaches live without your click.
+3. **Run it:** the repository → **Actions → Deploy database & functions → Run workflow**, choose the environment, then **Run**. It:
+   - builds every table, rule and function, including the 18 scheduled jobs;
+   - loads the starting data the first time;
+   - installs the Edge Functions.
 
-The seed's zone shapes, hub locations and prices are **samples**. Before launch, Ops redraws the zones (Cities & zones) and Finance sets the real prices (Pricing). Supabase → Project settings → Database → Connection string gives you the address for `psql`; or paste `seed.sql` into the SQL editor instead.
+   Green ✓ = done (about 3–5 minutes). Run it again after every change that touches the database or the functions; it only applies what is new.
 
-## 3. Edge Functions (messages, webhooks, SMS codes)
+The starting data's zone shapes, hub locations and prices are **samples**. Before launch, Ops redraws the zones (Cities & zones) and Finance sets the real prices (Pricing).
 
-```bash
-npx supabase functions deploy send-notifications
-npx supabase functions deploy send-webhooks
-npx supabase functions deploy send-sms-hook --no-verify-jwt
-npx supabase functions deploy whatsapp-webhook --no-verify-jwt
-# optional, only with Google road-time ranking:  npx supabase functions deploy dispatch-rank
-npx supabase secrets set NOTIFY_SECRET=<long random> SEND_SMS_HOOK_SECRET=<from step 1.3> \
-  HUBTEL_SMS_CLIENT_ID=… HUBTEL_SMS_CLIENT_SECRET=… HUBTEL_SMS_SENDER_ID=QCS \
-  WHATSAPP_TOKEN=… WHATSAPP_PHONE_NUMBER_ID=… WHATSAPP_APP_SECRET=… WHATSAPP_VERIFY_TOKEN=<long random> WHATSAPP_API_VERSION=v21.0 \
-  RESEND_API_KEY=… EMAIL_FROM="QCS Ghana <no-reply@qcsghana.com>"
-```
+## 3. Edge Function secrets
 
-"Long random" means at least 32 random characters: `openssl rand -hex 32`. Never reuse a value between staging and live.
+Supabase → **Edge Functions → Secrets → Add new secret**, one per line below. "Long random" means at least 32 random characters: use a password manager's generator. Never reuse a value between staging and live.
+
+| Name | Value |
+|---|---|
+| `NOTIFY_SECRET` | long random (also the Vault secret `notify_secret`, step 4) |
+| `SEND_SMS_HOOK_SECRET` | from step 1.3 |
+| `HUBTEL_SMS_CLIENT_ID`, `HUBTEL_SMS_CLIENT_SECRET` | Hubtel → SMS API keys |
+| `HUBTEL_SMS_SENDER_ID` | `QCS` (approved sender name) |
+| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET` | Meta → WhatsApp → API setup |
+| `WHATSAPP_VERIFY_TOKEN` | long random (also typed into Meta's webhook settings, step 7) |
+| `WHATSAPP_API_VERSION` | `v21.0` |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Resend → API keys; `QCS Ghana <no-reply@qcsghana.com>` |
+| `GOOGLE_MAPS_SERVER_KEY`, `DISPATCH_RANK_SECRET` | only with Google road-time ranking (optional) |
+
+Missing ones don't stop anything else: that channel just doesn't send, and System health shows it.
 
 ## 4. Scheduled jobs
 
@@ -78,7 +85,7 @@ npx supabase secrets set NOTIFY_SECRET=<long random> SEND_SMS_HOOK_SECRET=<from 
 | `portal_url` | the portal address, e.g. `https://portal.qcsghana.com` |
 | `cron_secret` | a new long random value; also used as `CRON_SECRET` in step 5 |
 
-2. **SQL editor:** paste and run `supabase/setup/schedule-jobs.sql`. It registers all 18 jobs and lists them at the end. Running it again is safe.
+2. That's all: the Deploy button already registered the 18 jobs, and they pick these secrets up on their next run. To repair or re-register them by hand, paste `supabase/setup/schedule-jobs.sql` into the SQL editor (safe to run again).
 
 ## 5. The three websites (Vercel)
 
@@ -151,8 +158,8 @@ cd apps/rider-mobile && eas update --channel production --message "Fix: delivery
 
 1. Make the change in the code. **GitHub runs all the tests automatically** on every push (`.github/workflows/ci.yml`). A red ✗ means don't ship.
 2. Staging first:
-   - `npx supabase db push` against staging if there are migrations;
+   - Actions → **Deploy database & functions** → staging, if the database or the functions changed;
    - Vercel builds the staging sites;
    - `eas update --channel preview` for app changes.
 3. Click through the change on staging.
-4. Then the same against live.
+4. Then the same against live (Deploy → live; you approve it).

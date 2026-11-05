@@ -1,6 +1,7 @@
 -- =====================================================================
--- QCS scheduled jobs: run this ONCE in the Supabase SQL editor after the migrations (and again whenever it changes;
--- re-running is safe: a job with the same name is simply updated). See docs/go-live.md, step 4.
+-- QCS scheduled jobs. The migrations already register all 18 on Supabase (the Deploy button, docs/go-live.md step 2).
+-- Keep this file for REPAIRS: paste it in the SQL editor to re-register every job (re-running is safe: a job with the
+-- same name is simply updated).
 --
 -- Before running it:
 --   1. Database → Extensions: turn on pg_cron and pg_net.

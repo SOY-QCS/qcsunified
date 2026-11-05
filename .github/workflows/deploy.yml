@@ -1,0 +1,75 @@
+# The "Deploy" button: GitHub → Actions → "Deploy database & functions" → Run workflow → choose staging or live.
+# Builds/updates the Supabase database (all migrations, incl. the scheduled jobs) and installs the Edge Functions.
+# Needs, per GitHub environment (Settings → Environments → staging / live):
+#   variable  SUPABASE_PROJECT_REF   the id in the Supabase project's address (https://<ref>.supabase.co)
+#   secret    SUPABASE_DB_PASSWORD   the database password chosen when the project was created
+# and once for the repository (Settings → Secrets and variables → Actions):
+#   secret    SUPABASE_ACCESS_TOKEN  supabase.com → Account → Access tokens → Generate
+# Full steps: docs/go-live.md.
+name: Deploy database & functions
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which environment
+        type: choice
+        options: [staging, live]
+        default: staging
+      functions:
+        description: Also deploy the Edge Functions
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ inputs.target }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the settings are there
+        run: |
+          missing=""
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || missing="$missing SUPABASE_ACCESS_TOKEN (repository secret)"
+          [ -n "$SUPABASE_DB_PASSWORD" ]  || missing="$missing SUPABASE_DB_PASSWORD (secret in the '${{ inputs.target }}' environment)"
+          [ -n "$PROJECT_REF" ]           || missing="$missing SUPABASE_PROJECT_REF (variable in the '${{ inputs.target }}' environment)"
+          if [ -n "$missing" ]; then echo "::error::Missing:$missing — see docs/go-live.md"; exit 1; fi
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Connect to the Supabase project
+        run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Database changes (+ starting data the first time)
+        # --include-seed loads supabase/seed.sql only if it has not been loaded before (Supabase remembers), so re-runs are safe
+        run: supabase db push --password "$SUPABASE_DB_PASSWORD" --include-seed --yes
+
+      - name: Edge Functions
+        if: ${{ inputs.functions }}
+        run: |
+          for f in send-notifications send-webhooks send-sms-hook whatsapp-webhook dispatch-rank; do
+            supabase functions deploy "$f" --project-ref "$PROJECT_REF"
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Deploy to ${{ inputs.target }}: ${{ job.status }}"
+            echo "Project: https://supabase.com/dashboard/project/$PROJECT_REF"
+            echo
+            echo "Next (first time only): Vault secrets, Edge Function secrets and Auth settings — docs/go-live.md steps 1, 3 and 4."
+          } >> "$GITHUB_STEP_SUMMARY"
