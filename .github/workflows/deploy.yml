@@ -20,6 +20,10 @@ on:
         description: Also deploy the Edge Functions
         type: boolean
         default: true
+      test_accounts:
+        description: Add test accounts (staging only; password shown in the run summary)
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-${{ inputs.target }}
@@ -45,6 +49,9 @@ jobs:
           [ -n "$SUPABASE_DB_PASSWORD" ]  || missing="$missing SUPABASE_DB_PASSWORD (secret in the '${{ inputs.target }}' environment)"
           [ -n "$PROJECT_REF" ]           || missing="$missing SUPABASE_PROJECT_REF (variable in the '${{ inputs.target }}' environment)"
           if [ -n "$missing" ]; then echo "::error::Missing:$missing — see docs/go-live.md"; exit 1; fi
+          if [ "${{ inputs.test_accounts }}" = "true" ] && [ "${{ inputs.target }}" != "staging" ]; then
+            echo "::error::Test accounts are for staging only. Untick 'Add test accounts' for live."; exit 1
+          fi
 
       - uses: supabase/setup-cli@v1
         with:
@@ -56,6 +63,25 @@ jobs:
       - name: Database changes (+ starting data the first time)
         # --include-seed loads supabase/seed.sql only if it has not been loaded before (Supabase remembers), so re-runs are safe
         run: supabase db push --password "$SUPABASE_DB_PASSWORD" --include-seed --yes
+
+      - name: Test accounts (staging only)
+        if: ${{ inputs.test_accounts && inputs.target == 'staging' }}
+        run: |
+          PW="Qcs-$(openssl rand -hex 8)"
+          sed "s/__TEST_PASSWORD__/$PW/" supabase/setup/staging-test-accounts.sql | jq -Rs '{query: .}' > "$RUNNER_TEMP/body.json"
+          code=$(curl -sS -o "$RUNNER_TEMP/resp.json" -w '%{http_code}' -X POST \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" --data @"$RUNNER_TEMP/body.json")
+          if [ "$code" != "200" ] && [ "$code" != "201" ]; then
+            cat "$RUNNER_TEMP/resp.json"; echo "::error::Could not add the test accounts (HTTP $code). See the message above."; exit 1
+          fi
+          {
+            echo "### Test accounts (staging)"
+            echo "Dashboard: **test.superadmin@test.qcsghana.com** (also test.cityadmin, test.dispatcher, test.hubmanager, test.finance, test.support, test.analyst), password **$PW**"
+            echo
+            echo "Apps and portal: phone **020 000 0001** to **020 000 0008**, code **123456** (add them under Supabase → Authentication → Phone → Test phone numbers first)."
+            echo "Who is who: supabase/setup/staging-test-accounts.sql. Running this again sets a new password."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Edge Functions
         if: ${{ inputs.functions }}

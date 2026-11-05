@@ -32,7 +32,7 @@ select tests.logout();
 select tests.ok((select email = 'ama@example.com' and marketing_opt_in and imported_at is not null and city_id = (select id from cities where code = 'ACC') and terms_accepted_at is null
                  from profiles where id = '00000000-0000-0000-0000-000000001501'), 'individual: details saved, marked imported, terms NOT accepted for them');
 select tests.ok((select business_name = 'Kente Hub' and account_type = 'vendor' and tags = '{fashion,instagram}' and payout_momo_network = 'Telecel'
-                        and cod_payout_schedule = 'daily' and crm_stage = 'active' and contact_phone = '233201500002'
+                        and cod_payout_schedule = 'daily' and crm_stage = 'active' and contact_phone = '+233201500002'
                  from vendors where owner_id = '00000000-0000-0000-0000-000000001502'), 'vendor created with payout details and tags');
 select tests.ok(exists (select 1 from user_roles where user_id = '00000000-0000-0000-0000-000000001502' and role = 'vendor_owner'), 'vendor owner role given');
 select tests.ok(exists (select 1 from wallets w join vendors v on v.id = w.owner_id where v.owner_id = '00000000-0000-0000-0000-000000001502'), 'vendor wallet created');

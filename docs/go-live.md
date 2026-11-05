@@ -36,7 +36,8 @@ Suggested addresses: `qcsghana.com` (website), `portal.qcsghana.com` (business p
 3. **Authentication → Sign In / Providers → Phone:** turn on. **Authentication → Hooks → Send SMS hook** (after step 2): choose *HTTPS*, address `https://<project-ref>.supabase.co/functions/v1/send-sms-hook`, and generate the secret (used as `SEND_SMS_HOOK_SECRET` in step 3).
 4. **Authentication → Rate Limits:** SMS sent per hour = **1000**.
 5. **Authentication → URL Configuration:** Site URL = the portal address; add the dashboard address and `<dashboard>/auth/callback` to Redirect URLs.
-6. **Staging only:** in Authentication → Phone → *Test phone numbers and OTPs*, add the test numbers (e.g. `233200000001=123456`).
+6. **Staging only:** in Authentication → Phone → *Test phone numbers and OTPs*, add the eight test numbers:
+   `233200000001=123456, 233200000002=123456, 233200000003=123456, 233200000004=123456, 233200000005=123456, 233200000006=123456, 233200000007=123456, 233200000008=123456`
 
 ## 2. Database and Edge Functions: the Deploy button
 
@@ -51,6 +52,8 @@ Everything runs on GitHub; nothing to install on your computer.
    - builds every table, rule and function, including the 18 scheduled jobs;
    - loads the starting data the first time;
    - installs the Edge Functions.
+
+   On **staging**, also tick **Add test accounts**: it creates one ready-made account for every kind of user (staff, customer, vendor, corporate, riders, hub handlers) and shows the password in the run's summary. Who is who: `supabase/setup/staging-test-accounts.sql`. It refuses to run on live.
 
    Green ✓ = done (about 3–5 minutes). Run it again after every change that touches the database or the functions; it only applies what is new.
 
