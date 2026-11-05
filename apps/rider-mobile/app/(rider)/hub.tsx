@@ -59,6 +59,7 @@ export default function HubHome() {
       </View>}
       {(counts.labels_to_print ?? 0) > 0 && <Text style={{ marginTop: 12, color: colors.muted }}>{counts.labels_to_print} parcel(s) need a label — print them at the hub desk (Ops dashboard → Hubs → your hub).</Text>}
       <View style={{ height: 24 }} />
+      <Button title="Help & support" kind="secondary" onPress={() => router.push("/support")} />
       <Button title="Sign out" kind="secondary" onPress={() => supabase().auth.signOut()} />
     </ScrollView>
   );

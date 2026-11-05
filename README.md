@@ -369,3 +369,53 @@ double reads), works offline and syncs later; every scan is logged with who/when
 `supabase/tests/90_hubs_fulfilment.sql`: full Accra → Kumasi journey (doorstep and hub collection),
 bags, manifests, missing parcels, rider pay for both legs, stock receive/reserve/pick/pack, low-stock
 alerts, cancellations, storage billing, vendor privacy.
+
+## Phase 10 — CRM & support
+
+Everything lives in **Ops dashboard → CRM & Support** (Support, City Admin, Super Admin; Analysts can look).
+
+**Support tickets**
+- Opened from: "Report a problem" on every delivery (client app, rider app, vendor portal), "Contact support" in Help,
+  a WhatsApp message to the QCS number, or by staff logging a phone call / walk-in ("Log a call").
+- Problem types set the priority: COD money and lost/damaged parcels are **urgent**; late, rider and address are high.
+- SLA clock counts **working hours only** (Settings `support_hours`, Mon–Sat 8am–6pm): first reply within 1 hour,
+  solved within 24 hours. Overdue tickets turn red and the agent (or the city's support team) gets a push.
+- Agents reply (push to the customer, or WhatsApp/SMS for people without the app), write internal notes the customer
+  never sees, use canned replies, assign, change status/priority (audited with a reason). The customer can reply and
+  attach photos; replying reopens a solved ticket. Solved tickets close after 7 days.
+
+**WhatsApp inbox.** Messages to the QCS number become tickets (photos/PDFs are kept privately); follow-up messages join
+the same conversation; a tracking number in the text links the delivery; words like "damaged" or "COD" set the problem
+type. Riders' `DELIVERED …` commands still work. **STOP** opts out of offers, **START** opts back in.
+Agents answer in free text within 24 hours of the customer's last message; after that WhatsApp only allows our
+approved template.
+
+**360 profiles.** Customers (CRM → Customers) and vendors (Vendors → vendor) show orders, spend, COD, complaints,
+wallet, rating, tags, account manager and a notes timeline.
+
+**Leads pipeline** (New → Contacted → Trial → Active → Churn risk, plus Lost). A lead that signs up as a vendor with the
+same phone is linked automatically and moves to Trial; Trial → Active after 5 deliveries.
+
+**Churn alerts** (every morning, 05:30): vendor flagged when this week is 30%+ below their 4-week average
+(only vendors averaging 5+ a week). Their account manager is notified; handling an alert needs a note.
+
+**Campaigns.** Build a segment (customers or vendors; city, recent/inactive, order count, service, tags, stage), see how
+many people it reaches per channel, write the message, choose push / SMS / WhatsApp / email. Support prepares;
+**an Admin approves and sends**. Only people who ticked "send me offers" are ever included, and each message carries an
+opt-out (link to `/u/<code>` on the website for SMS/email, STOP on WhatsApp). People who opt out after sending started are skipped.
+
+**Customer service for vendors** (§11, vendors with the service switched on): agents see only those vendors' open orders,
+log calls/chats, and message the vendor's customer as "QCS on behalf of <vendor>". The vendor sees every contact on the
+order in the portal. Fee per delivered order: Settings `cs_fee_per_order` (placeholder GHS 2.00), billed to the vendor wallet.
+
+**Help centre.** Articles edited in CRM → Help centre appear in both apps, the vendor portal (`/help`) and the website (`/help`).
+
+**Before going live:** ask Meta to approve two WhatsApp templates — `qcs_support_reply` (support replies after 24 h) and
+`qcs_on_behalf_of` (customer service messages) — plus any offer templates you want to use in campaigns.
+
+### Tests
+`supabase/tests/100_crm_support.sql` (116 checks): working-hours clock, reporting problems (own orders only, duplicates
+merged), privacy, internal notes, reopen/close, SLA alerts, WhatsApp inbox (auto-reply, follow-ups, photos, retries,
+STOP/START, rider commands), 360 profiles, leads + automatic linking, churn alerts + recovery, segments (opt-in only),
+campaign approval and sending, unsubscribe, help articles, customer-service log and fee. Edge Function tests cover
+WhatsApp photos/names and free-text replies (`pnpm functions:test`).

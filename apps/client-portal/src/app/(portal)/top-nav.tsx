@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "./actions";
 
-const LINKS = [{ href: "/", label: "Home" }, { href: "/book", label: "Book" }, { href: "/bulk", label: "Bulk upload" }, { href: "/orders", label: "Orders" }, { href: "/stock", label: "Stock" }, { href: "/wallet", label: "Wallet" }];
+const LINKS = [{ href: "/", label: "Home" }, { href: "/book", label: "Book" }, { href: "/bulk", label: "Bulk upload" }, { href: "/orders", label: "Orders" }, { href: "/stock", label: "Stock" }, { href: "/wallet", label: "Wallet" }, { href: "/help", label: "Help" }];
 
 export function TopNav() {
   const path = usePathname();

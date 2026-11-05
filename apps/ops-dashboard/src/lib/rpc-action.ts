@@ -17,6 +17,8 @@ const ALLOWED = new Set([
   "mark_labels_printed", "plan_last_mile", "open_bag", "seal_bag", "create_manifest", "add_bag_to_manifest", "dispatch_manifest", "arrive_manifest",
   "close_manifest", "adjust_stock", "set_hub_fulfilment_rates", "resend_delivery_code", "pack_order", "move_stock", "bill_storage",
   "create_rider_payout_batch", "create_vendor_cod_batch", "cancel_payout_batch", "release_payout_hold", "receive_cod_cash", "bank_hub_cash", "add_rider_adjustment",
+  "reply_ticket", "update_ticket", "staff_open_ticket", "add_crm_note", "set_crm_profile", "save_lead", "move_lead", "handle_crm_alert",
+  "segment_preview", "save_segment", "save_campaign", "schedule_campaign", "cancel_campaign", "log_contact", "cs_message",
 ]);
 
 export async function rpcAction(fn: string, args: Record<string, unknown>, done: string, revalidate = "/"): Promise<Result> {

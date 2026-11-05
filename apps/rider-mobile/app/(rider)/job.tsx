@@ -126,6 +126,7 @@ export default function JobScreen() {
         </>
       )}
       <Button title="Refresh" kind="secondary" onPress={refresh} />
+      <Button title="Report a problem" kind="secondary" onPress={() => router.push({ pathname: "/support", params: { view: "report", tracking: first?.tracking_number ?? "" } })} />
       <Scanner visible={scanning} onScan={scanned} onClose={() => setScanning(false)} />
     </Screen>
   );

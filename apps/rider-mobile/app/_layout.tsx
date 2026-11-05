@@ -20,8 +20,8 @@ function Gate() {
     const place = placeFor(account);
     const here = segments[segments.length - 1];
     // active riders may move between home, job and deliver; everyone else stays on their one screen
-    const allowed = place === "home" ? ["home", "job", "deliver", "earnings"]
-      : place === "hub" ? ["hub", "hub-scan", "hub-manifest", "hub-collect", "hub-pick"] : [place];
+    const allowed = place === "home" ? ["home", "job", "deliver", "earnings", "support"]
+      : place === "hub" ? ["hub", "hub-scan", "hub-manifest", "hub-collect", "hub-pick", "support"] : [place];
     if (!allowed.includes(here as string)) router.replace(`/${place}`);
   }, [ready, session, account, segments, router]);
 

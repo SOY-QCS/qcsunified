@@ -70,6 +70,7 @@ export default function Home() {
       {offer && <OfferCard offer={offer} onAnswer={answer} busy={busy} />}
       {job && <Button title="Open my current job" onPress={() => router.push("/job")} />}
       <Button title="My earnings & cash" kind="secondary" onPress={() => router.push("/earnings")} />
+      <Button title="Help & support" kind="secondary" onPress={() => router.push("/support")} />
       {online && !offer && !job && <Text style={{ color: colors.muted, marginTop: 16, textAlign: "center" }}>Waiting for a job…</Text>}
       <View style={{ flex: 1 }} />
       <Button title="Sign out" kind="secondary" onPress={async () => { if (online) await toggle(false); await unregisterPush(pushToken.current); await supabase().auth.signOut(); }} />

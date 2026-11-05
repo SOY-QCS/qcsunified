@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { colors } from "@qcs/ui";
 import { Shell } from "./shell";
 
@@ -11,6 +12,8 @@ export default function Home() {
         <input name="tn" required placeholder="Tracking number" style={{ flex: 1, minWidth: 200, padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid #ccc" }} />
         <button style={{ padding: "12px 18px", borderRadius: 10, border: 0, background: colors.primary, color: "#fff", fontWeight: 800 }}>Track</button>
       </form>
+      <h2>Questions?</h2>
+      <p><Link href="/help">Help centre</Link>: prices, delivery codes, cash on delivery, inter-city and claims.</p>
       <p style={{ color: colors.muted, marginTop: 24 }}>Rate calculator, hub pages and rider sign-up come in a later phase.</p>
     </Shell>
   );

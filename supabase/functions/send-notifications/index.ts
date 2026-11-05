@@ -6,7 +6,7 @@
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendHubtelSms, type HubtelSmsConfig } from "../_shared/hubtel-sms.ts";
-import { expoPushRequest, readExpoTickets, resendRequest, whatsappTemplateRequest, type Outgoing } from "../_shared/messages.ts";
+import { expoPushRequest, readExpoTickets, resendRequest, whatsappRequest, type Outgoing } from "../_shared/messages.ts";
 
 export interface SendDeps {
   claim: (limit: number) => Promise<Outgoing[]>;
@@ -35,7 +35,7 @@ export async function sendOne(m: Outgoing, d: SendDeps): Promise<{ ok: boolean; 
     }
     if (m.channel === "whatsapp") {
       if (!d.whatsapp) return { ok: false, error: "WhatsApp keys not set" };
-      const r = whatsappTemplateRequest(d.whatsapp, m);
+      const r = whatsappRequest(d.whatsapp, m);
       const res = await d.fetch(r.url, r.init);
       return res.ok ? { ok: true } : { ok: false, error: `WhatsApp ${res.status}: ${(await res.text()).slice(0, 200)}` };
     }

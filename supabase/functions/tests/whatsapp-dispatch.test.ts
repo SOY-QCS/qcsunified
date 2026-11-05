@@ -1,6 +1,6 @@
 import assertNode from "node:assert/strict";
 import { handle } from "../whatsapp-webhook/index.ts";
-import { textMessages, validSignature } from "../_shared/whatsapp.ts";
+import { inboundMessages, textMessages, validSignature } from "../_shared/whatsapp.ts";
 import { googleRouteMatrix, rankAll } from "../dispatch-rank/index.ts";
 
 const eq = (a: unknown, b: unknown) => assertNode.deepEqual(a, b);
@@ -19,7 +19,7 @@ function deps() {
     replies,
     d: {
       verifyToken: "verify-me", appSecret: SECRET,
-      handle: async (id: string, _from: string, body: string) => { if (seen.has(id)) return null; seen.add(id); return `OK: ${body}`; },
+      handle: async (m: { id: string; body: string }) => { if (seen.has(m.id)) return null; seen.add(m.id); return `OK: ${m.body}`; },
       reply: async (_to: string, body: string) => { replies.push(body); },
     },
   };
@@ -50,9 +50,32 @@ Deno.test("forged or unsigned messages are refused", async () => {
   eq(replies, []);
 });
 
-Deno.test("only text messages are read", async () => {
-  eq(textMessages({ entry: [{ changes: [{ value: { statuses: [{ id: "x" }], messages: [{ id: "a", from: "1", type: "image" }] } }] }] }), []);
+Deno.test("customer photos and names are read; receipts ignored", async () => {
+  const payload = { entry: [{ changes: [{ value: {
+    contacts: [{ wa_id: "233551234567", profile: { name: "Yaa Asantewaa" } }],
+    statuses: [{ id: "x" }],
+    messages: [
+      { id: "a", from: "233551234567", type: "image", image: { id: "media-1", mime_type: "image/jpeg", caption: "box is wet" } },
+      { id: "b", from: "233551234567", type: "text", text: { body: "hello" } },
+      { id: "c", from: "233551234567", type: "reaction" },
+    ] } }] }] };
+  eq(inboundMessages(payload), [
+    { id: "a", from: "233551234567", name: "Yaa Asantewaa", body: "box is wet", media: { kind: "image", id: "media-1", mime: "image/jpeg", filename: undefined } },
+    { id: "b", from: "233551234567", name: "Yaa Asantewaa", body: "hello", media: null },
+  ]);
+  eq(textMessages(payload), [{ id: "b", from: "233551234567", body: "hello" }]);    // rider commands: text only
   eq(await validSignature("x", null, SECRET), false);
+});
+
+Deno.test("a photo is saved and passed with the message", async () => {
+  const got: unknown[] = [];
+  const body = JSON.stringify({ entry: [{ changes: [{ value: { messages: [{ id: "p1", from: "233551234567", type: "image", image: { id: "m1", mime_type: "image/jpeg" } }] } }] }] });
+  await handle(new Request("http://x/", { method: "POST", body, headers: { "x-hub-signature-256": await sign(body) } }), {
+    verifyToken: "v", appSecret: SECRET, reply: async () => {},
+    saveMedia: async (m) => `wa/${m.id}.jpg`,
+    handle: async (m, path) => { got.push([m.media?.kind, path]); return null; },
+  });
+  eq(got, [["image", "wa/p1.jpg"]]);
 });
 
 Deno.test("riders ranked by road time, not straight line", async () => {

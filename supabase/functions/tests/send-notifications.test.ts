@@ -1,6 +1,6 @@
 import assertNode from "node:assert/strict";
 import { sendBatch, type SendDeps } from "../send-notifications/index.ts";
-import { readExpoTickets, waNumber, whatsappTemplateRequest, type Outgoing } from "../_shared/messages.ts";
+import { readExpoTickets, waNumber, whatsappRequest, whatsappTemplateRequest, type Outgoing } from "../_shared/messages.ts";
 
 const eq = (a: unknown, b: unknown) => assertNode.deepEqual(a, b);
 const msg = (o: Partial<Outgoing>): Outgoing => ({ id: "1", channel: "sms", to: "+233241234567", key: "on_the_way", subject: "", body: "Hello", wa_template: null, wa_params: [], data: {}, ...o });
@@ -59,4 +59,13 @@ Deno.test("WhatsApp uses the approved template with its parameters in order", as
 Deno.test("helpers", () => {
   eq([waNumber("+233 24 123 4567"), waNumber("0241234567"), waNumber("12")], ["233241234567", "233241234567", null]);
   eq(readExpoTickets(["x"], { data: [{ status: "error", message: "bad" }] }), { ok: false, dead: [], error: "bad" });
+});
+
+Deno.test("support reply inside the 24-hour window goes as plain WhatsApp text", () => {
+  const cfg = { token: "t", phoneNumberId: "99", version: "v21.0" };
+  const free = JSON.parse(String(whatsappRequest(cfg, msg({ channel: "whatsapp", to: "+233551234567", body: "QCS Support (#12): checking now", wa_template: null, data: { wa_text: true } })).init.body));
+  assertNode.deepEqual([free.type, free.to, free.text.body], ["text", "233551234567", "QCS Support (#12): checking now"]);
+  const late = JSON.parse(String(whatsappRequest(cfg, msg({ channel: "whatsapp", to: "+233551234567", wa_template: "qcs_support_reply", wa_params: ["12", "x"], data: { wa_text: false } })).init.body));
+  assertNode.equal(late.type, "template");
+  assertNode.throws(() => whatsappRequest(cfg, msg({ channel: "whatsapp", wa_template: null, data: {} })));   // never free text without the flag
 });

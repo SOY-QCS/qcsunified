@@ -7,12 +7,14 @@ import { colors } from "@qcs/ui";
 import { RIDER_RATING_TAGS, STATUS_LABELS, etaText, isLive, whatsappLink } from "@qcs/types";
 import { api } from "../../lib/api";
 import { useTracking } from "../../lib/tracking";
+import { useAuth } from "../../lib/auth";
 
 const when = (d: string) => new Date(d).toLocaleString("en-GB", { timeZone: "Africa/Accra", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 /** Live tracking: map with the rider, arrival estimate, rider card with call/WhatsApp, history, and rating after delivery. */
 export default function Track() {
   const router = useRouter();
+  const { account } = useAuth();
   const { tn } = useLocalSearchParams<{ tn: string }>();
   const { data: r, error, refresh } = useTracking(tn);
   const map = useRef<MapView>(null);
@@ -77,6 +79,7 @@ export default function Track() {
           <Text style={{ color: colors.muted }}>{when(e.at)}</Text>
         </View>
       ))}
+      {r.tracking_number && <Button title="Report a problem" kind="secondary" onPress={() => router.push({ pathname: "/support", params: { view: "report", tracking: r.tracking_number!, who: account?.vendor ? "vendor" : "client" } })} />}
       <Button title="Back" kind="secondary" onPress={() => (router.canGoBack() ? router.back() : router.replace("/orders"))} />
     </Screen>
   );

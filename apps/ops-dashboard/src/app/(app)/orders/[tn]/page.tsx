@@ -11,9 +11,11 @@ export default async function OrderDetail({ params }: PageProps<"/orders/[tn]">)
   const sb = await supabaseServer();
   const { data: o } = await sb.from("orders").select("*, vendors(id, business_name), riders(id, profiles!riders_id_fkey(full_name, phone))").eq("tracking_number", decodeURIComponent(tn)).maybeSingle();
   if (!o) notFound();
-  const [{ data: events }, { data: notes }] = await Promise.all([
+  const [{ data: events }, { data: notes }, { data: tickets }, { data: contacts }] = await Promise.all([
     sb.from("order_events").select("id, from_status, to_status, created_at, occurred_at, note, reason, photo_path, actor:profiles(full_name)").eq("order_id", o.id).order("id"),
     sb.from("notifications").select("template, channel, status, created_at").eq("order_id", o.id).order("created_at", { ascending: false }).limit(20),
+    sb.from("tickets").select("id, number, subject, status, opened_as, created_at").eq("order_id", o.id).order("created_at", { ascending: false }),
+    sb.from("order_contacts").select("id, kind, outcome, note, created_at, profiles(full_name)").eq("order_id", o.id).order("created_at", { ascending: false }),
   ]);
   const pod = await Promise.all([o.pod_signature_path, o.pod_photo_path].map(async (p: string | null) => (p ? (await sb.storage.from("pod").createSignedUrl(p, 600)).data?.signedUrl ?? null : null)));
   const vendor = Array.isArray(o.vendors) ? o.vendors[0] : o.vendors;
@@ -55,6 +57,11 @@ export default async function OrderDetail({ params }: PageProps<"/orders/[tn]">)
             <td>{e.from_status ? `${statusText(e.from_status)} → ` : ""}<strong>{statusText(e.to_status)}</strong></td><td>{actor?.full_name ?? "system"}</td><td>{[e.reason, e.note].filter(Boolean).join(" · ")}</td></tr>;
         })}</tbody>
       </table>
+      <h2>Support tickets <Link className="btn small secondary" href={`/crm/tickets/new?tracking=${o.tracking_number}`}>+ Log a call</Link></h2>
+      <table><tbody>{(tickets ?? []).map((t) => <tr key={t.id}><td><Link href={`/crm/tickets/${t.id}`}>#{t.number}</Link></td><td>{t.subject}</td><td>{t.opened_as}</td><td>{t.status}</td><td>{when(t.created_at)}</td></tr>)}
+        {!tickets?.length && <tr><td className="muted">No problems reported.</td></tr>}</tbody></table>
+      {!!contacts?.length && <><h2>Customer-service contacts</h2>
+        <table><tbody>{contacts.map((c) => <tr key={c.id}><td>{when(c.created_at)}</td><td>{c.kind}</td><td>{c.outcome.replaceAll("_", " ")}</td><td>{c.note}</td><td className="muted">{(Array.isArray(c.profiles) ? c.profiles[0] : c.profiles)?.full_name}</td></tr>)}</tbody></table></>}
       <h2>Messages sent</h2>
       <table><tbody>{(notes ?? []).map((n, i) => <tr key={i}><td>{when(n.created_at)}</td><td>{n.template}</td><td>{n.channel}</td><td>{n.status}</td></tr>)}</tbody></table>
     </>

@@ -1,17 +1,21 @@
 /**
- * WhatsApp backup for riders: "DELIVERED <tracking no> <code>" sent to the QCS WhatsApp number updates the order.
+ * The QCS WhatsApp number:
+ *  • riders' backup: "DELIVERED <tracking no> <code>" updates the order;
+ *  • everyone else: the message becomes (or continues) a support ticket; STOP / START opts out of / back in to offers.
+ * Photos and PDFs customers send are saved to the private "support" storage bucket and attached to the ticket.
  *  GET  — Meta's one-time webhook check (hub.verify_token).
  *  POST — incoming messages; the Meta signature is checked before anything else.
  * Secrets: WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET, WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_API_VERSION (optional)
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { replyRequest, textMessages, validSignature } from "../_shared/whatsapp.ts";
+import { inboundMessages, KEEP_MEDIA, replyRequest, validSignature, type Inbound } from "../_shared/whatsapp.ts";
 
 export interface Deps {
   verifyToken: string;
   appSecret: string;
-  handle: (id: string, from: string, body: string) => Promise<string | null>;   // null = already handled
+  handle: (m: Inbound, mediaPath: string | null) => Promise<string | null>;   // null = nothing to say back
   reply: (to: string, body: string) => Promise<void>;
+  saveMedia?: (m: Inbound) => Promise<string | null>;                        // storage path, or null if not kept
 }
 
 export async function handle(req: Request, deps: Deps): Promise<Response> {
@@ -29,13 +33,15 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   let payload: unknown;
   try { payload = JSON.parse(raw); } catch { return new Response("Bad JSON", { status: 400 }); }
 
-  for (const m of textMessages(payload)) {
+  for (const m of inboundMessages(payload)) {
     try {
-      const answer = await deps.handle(m.id, m.from, m.body);
+      let path: string | null = null;
+      if (m.media && deps.saveMedia) path = await deps.saveMedia(m).catch((e) => { console.error("media save failed", m.id, e); return null; });
+      const answer = await deps.handle(m, path);
       if (answer) await deps.reply(m.from, answer);
     } catch (e) {
       console.error("whatsapp message failed", m.id, e);
-      await deps.reply(m.from, "Sorry, we couldn't process that. Please use the rider app or call dispatch.").catch(() => {});
+      await deps.reply(m.from, "Sorry, we couldn't process that just now. Please try again in a few minutes or call QCS.").catch(() => {});
     }
   }
   return new Response("ok", { status: 200 });   // always 200 for signed messages, or Meta keeps retrying
@@ -47,10 +53,26 @@ if (import.meta.main) {
   Deno.serve((req) => handle(req, {
     verifyToken: Deno.env.get("WHATSAPP_VERIFY_TOKEN") ?? "",
     appSecret: Deno.env.get("WHATSAPP_APP_SECRET") ?? "",
-    handle: async (id, from, body) => {
-      const { data, error } = await db.rpc("handle_whatsapp_message", { p_id: id, p_from: from, p_body: body });
+    handle: async (m, path) => {
+      const { data, error } = await db.rpc("handle_whatsapp_message", {
+        p_id: m.id, p_from: m.from, p_body: m.body, p_name: m.name,
+        p_media: m.media ? { kind: m.media.kind, path, mime: m.media.mime, filename: m.media.filename ?? null } : null,
+      });
       if (error) throw error;
       return data as string | null;
+    },
+    // Meta keeps media for a short time: fetch it now and keep a private copy (photos/PDFs up to 5 MB).
+    saveMedia: async (m) => {
+      const ext = m.media && KEEP_MEDIA[m.media.mime.split(";")[0]!];
+      if (!m.media || !ext || !cfg.token) return null;
+      const auth = { Authorization: `Bearer ${cfg.token}` };
+      const meta = await (await fetch(`https://graph.facebook.com/${cfg.version}/${m.media.id}`, { headers: auth })).json() as { url?: string; file_size?: number };
+      if (!meta.url || (meta.file_size ?? 0) > 5_000_000) return null;
+      const bytes = await (await fetch(meta.url, { headers: auth })).arrayBuffer();
+      const path = `wa/${m.id.replace(/[^A-Za-z0-9._-]/g, "_")}.${ext}`;
+      const { error } = await db.storage.from("support").upload(path, bytes, { contentType: m.media.mime, upsert: true });
+      if (error) throw error;
+      return path;
     },
     reply: async (to, body) => {
       if (!cfg.token || !cfg.phoneNumberId) return;

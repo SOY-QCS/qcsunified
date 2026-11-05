@@ -22,7 +22,9 @@ export default function Home() {
   // Delivery updates by push; tapping one opens that parcel's tracking.
   useEffect(() => { registerForPush("client").then((t) => { pushToken.current = t; }); }, []);
   useEffect(() => onNotificationTap((d) => {
-    if (typeof d.tracking_number === "string") router.push({ pathname: "/track", params: { tn: d.tracking_number } });
+    // a support reply opens the conversation; delivery updates open tracking
+    if (typeof d.ticket_id === "string") router.push({ pathname: "/support", params: { view: "ticket", id: d.ticket_id } });
+    else if (typeof d.tracking_number === "string") router.push({ pathname: "/track", params: { tn: d.tracking_number } });
   }), [router]);
 
   return (
@@ -42,6 +44,7 @@ export default function Home() {
       </View>
       {mode === "personal" && <Button title="My wallet & invite friends" kind="secondary" onPress={() => router.push("/wallet")} />}
       <Button title="My deliveries & tracking" kind="secondary" onPress={() => router.push("/orders")} />
+      <Button title="Help & support" kind="secondary" onPress={() => router.push({ pathname: "/support", params: { who: mode === "business" && vendor ? "vendor" : "client" } })} />
       <Button title="Notification settings" kind="secondary" onPress={() => router.push("/settings")} />
       <View style={{ flex: 1 }} />
       <Button title="Sign out" kind="secondary" onPress={async () => { await unregisterPush(pushToken.current); await supabase().auth.signOut(); }} />

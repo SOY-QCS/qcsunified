@@ -2,7 +2,8 @@
  * Builders for the four outgoing channels. Pure functions (no Deno globals) so they can be tested.
  *   push     → Expo push service (free; delivers to Android FCM and Apple APNs for us)
  *   sms      → Hubtel SMS (see hubtel-sms.ts)
- *   whatsapp → WhatsApp Cloud API, using a Meta-approved template (required for messages we start)
+ *   whatsapp → WhatsApp Cloud API, using a Meta-approved template (required for messages we start);
+ *              support replies inside the 24-hour window after the customer wrote are plain text
  *   email    → Resend
  */
 export interface Outgoing {
@@ -78,6 +79,25 @@ export function whatsappTemplateRequest(cfg: { token: string; phoneNumberId: str
       }),
     } satisfies RequestInit,
   };
+}
+
+/** Plain-text WhatsApp: only allowed within 24 hours of the customer's last message (support replies). */
+export function whatsappTextRequest(cfg: { token: string; phoneNumberId: string; version: string }, m: Outgoing) {
+  const to = waNumber(String(m.to));
+  if (!to) throw new Error("not a Ghana mobile number");
+  return {
+    url: `https://graph.facebook.com/${cfg.version}/${cfg.phoneNumberId}/messages`,
+    init: {
+      method: "POST",
+      headers: { Authorization: `Bearer ${cfg.token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: m.body.slice(0, 4000) } }),
+    } satisfies RequestInit,
+  };
+}
+
+/** Free text when the database says the 24-hour window is open (wa_text), otherwise the approved template. */
+export function whatsappRequest(cfg: { token: string; phoneNumberId: string; version: string; language?: string }, m: Outgoing) {
+  return m.data?.wa_text === true && !m.wa_template ? whatsappTextRequest(cfg, m) : whatsappTemplateRequest(cfg, m);
 }
 
 export function resendRequest(cfg: { apiKey: string; from: string }, m: Outgoing) {
