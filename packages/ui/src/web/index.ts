@@ -4,3 +4,4 @@ export { TrackView } from "./track-view";
 export { ConfirmView } from "./confirm-view";
 export { BarList, HeatGrid, Kpi, LineChart, StackedBars, type StackRow } from "./charts";
 export { FORMATS, SERVICE_SERIES, fmtGhs, fmtHours, fmtInt, fmtMins, fmtPct, type FmtName } from "./format";
+export { LabelLinker } from "./label-linker";

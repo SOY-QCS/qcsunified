@@ -46,6 +46,13 @@ select tests.ok(coalesce((select array_agg(p.proname::text order by p.proname) f
                 <@ array['address_link', 'app_status', 'get_setting', 'hub_point', 'nearest_hub', 'setting_int', 'unsubscribe', 'zone_for_point'],
                 'every other owner-rights function checks its caller');
 
+-- 6b. Functions of extensions switched on later stay usable (the lockdown is for our own functions in public only).
+create function extensions.qcs_probe() returns int language sql as 'select 1';
+create function public.qcs_probe() returns int language sql as 'select 1';
+select tests.ok(has_function_privilege('authenticated', 'extensions.qcs_probe()', 'execute'), 'new extension functions are usable by signed-in users');
+select tests.ok(not has_function_privilege('anon', 'public.qcs_probe()', 'execute'), 'new functions of our own are still closed to visitors by default');
+drop function extensions.qcs_probe(); drop function public.qcs_probe();
+
 -- 7. Storage buckets are private; views respect the reader's permissions.
 select tests.ok(not exists (select 1 from storage.buckets where public), 'no public storage bucket');
 select tests.ok(not exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind = 'v'

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { LabelLinker } from "@qcs/ui/web";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,7 +12,7 @@ export const viewport: Viewport = { themeColor: "#df6518", width: "device-width"
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en-GH">
-      <body>{children}</body>
+      <body>{children}<LabelLinker /></body>
     </html>
   );
 }

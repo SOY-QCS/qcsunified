@@ -55,7 +55,7 @@ select tests.ok((select status from orders where id = '20000000-0000-0000-0000-0
 select transition_order('20000000-0000-0000-0000-000000001802', 'CONFIRMED');
 select tests.ok((select status from orders where id = '20000000-0000-0000-0000-000000001802') = 'CONFIRMED', 'Kumasi carries on');
 select tests.ok((select jsonb_array_length(public.app_status('client', '1.0.0') -> 'pauses')) = 1
-                and (public.app_status('client', '1.0.0') -> 'pauses' -> 0 ->> 'text') like 'Bookings in Accra are paused until __:__: Heavy rain: back soon', 'the apps get the message to show');
+                and (public.app_status('client', '1.0.0') -> 'pauses' -> 0 ->> 'text') ~ '^Bookings in Accra are paused until (\d\d:\d\d|\d{1,2} [A-Z][a-z]{2}, \d\d:\d\d): Heavy rain: back soon$', 'the apps get the message to show (time today, or date + time if it ends tomorrow)');
 select tests.logout();
 select tests.ok(exists (select 1 from audit_log where table_name = 'cities' and reason = 'Heavy rain: back soon'), 'pausing is in the audit log');
 select tests.login('00000000-0000-0000-0000-000000001811');
