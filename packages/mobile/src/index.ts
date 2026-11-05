@@ -3,4 +3,5 @@ export * from "./kit";
 export * from "./phone-login";
 export * from "./upload";
 export * from "./push";
+export * from "./device";
 export * from "./support";

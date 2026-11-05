@@ -58,6 +58,8 @@ table { width: 100%; border-collapse: collapse; background: #fff; border: 1px so
 th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: .92rem; }
 th { background: #faf8f5; font-weight: 600; }
 .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #fbeee4; color: var(--qcs-orange-dark); font-size: .78rem; font-weight: 600; margin: 0 4px 4px 0; }
+a.tag { text-decoration: none; }
+.tag.on { background: var(--qcs-orange); color: #fff; }
 .docs { display: flex; gap: 8px; flex-wrap: wrap; }
 .docs a img { width: 110px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
 

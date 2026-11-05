@@ -1,6 +1,7 @@
 import { errorResponse } from "@/server/supabase";
 import { CORS, json, preflight, track, viewerClient } from "@/server/tracking";
 import { serviceClient } from "@/server/supabase";
+import { clientIp, limited } from "@/server/rate-limit";
 
 export const OPTIONS = preflight;
 
@@ -11,6 +12,7 @@ export const OPTIONS = preflight;
  */
 export async function GET(req: Request, ctx: { params: Promise<{ tn: string }> }) {
   try {
+    const stop = await limited("track", `ip:${clientIp(req)}`); if (stop) return stop;
     const { tn } = await ctx.params;
     const last4 = new URL(req.url).searchParams.get("last4");
     let service = null;

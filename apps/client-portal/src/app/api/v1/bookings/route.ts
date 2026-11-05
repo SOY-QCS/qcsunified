@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiError, caller, errorResponse, serviceClient } from "@/server/supabase";
+import { limited } from "@/server/rate-limit";
 
 const Body = z.object({ quote_id: z.uuid() });
 
@@ -7,6 +8,7 @@ const Body = z.object({ quote_id: z.uuid() });
 export async function POST(req: Request) {
   try {
     const me = await caller(req);
+    const stop = await limited("bookings", `user:${me.user.id}`); if (stop) return stop;
     const parsed = Body.safeParse(await req.json());
     if (!parsed.success) throw new ApiError(400, "quote_id is required");
     const { data, error } = await serviceClient().rpc("create_booking", { p_user: me.user.id, p_quote: parsed.data.quote_id });

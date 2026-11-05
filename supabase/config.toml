@@ -203,7 +203,10 @@ password_requirements = "lower_upper_letters_digits"
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
 email_sent = 30
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
-sms_sent = 30
+# This cap is for the WHOLE project, so 30 would block logins on a busy morning. Abuse is stopped per phone
+# instead (5 codes per hour, in send-sms-hook) plus 30 seconds between codes (auth.sms max_frequency).
+# On Supabase cloud set the same number in Dashboard → Authentication → Rate Limits.
+sms_sent = 1000
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
 anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
@@ -458,4 +461,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-notifications]
+verify_jwt = false   # called by our schedule with its own secret
+
+[functions.send-webhooks]
 verify_jwt = false   # called by our schedule with its own secret

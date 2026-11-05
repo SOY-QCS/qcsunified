@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Banner, Button, Screen, Title, onNotificationTap, registerForPush, supabase, unregisterPush } from "@qcs/mobile";
+import { Banner, Button, Screen, Title, onNotificationTap, registerDevice, registerForPush, supabase, unregisterPush } from "@qcs/mobile";
 import { colors } from "@qcs/ui";
 import { useAuth } from "../../lib/auth";
 
@@ -20,7 +20,7 @@ export default function Home() {
   const pushToken = useRef<string | null>(null);
 
   // Delivery updates by push; tapping one opens that parcel's tracking.
-  useEffect(() => { registerForPush("client").then((t) => { pushToken.current = t; }); }, []);
+  useEffect(() => { registerForPush("client").then((t) => { pushToken.current = t; }); registerDevice("client"); }, []);
   useEffect(() => onNotificationTap((d) => {
     // a support reply opens the conversation; delivery updates open tracking
     if (typeof d.ticket_id === "string") router.push({ pathname: "/support", params: { view: "ticket", id: d.ticket_id } });

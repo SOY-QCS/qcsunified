@@ -7,6 +7,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendHubtelSms, type HubtelSmsConfig } from "../_shared/hubtel-sms.ts";
 import { expoPushRequest, readExpoTickets, resendRequest, whatsappRequest, type Outgoing } from "../_shared/messages.ts";
+import { fromScheduler } from "../_shared/auth.ts";
 
 export interface SendDeps {
   claim: (limit: number) => Promise<Outgoing[]>;
@@ -66,7 +67,7 @@ if (import.meta.main) {
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
   const env = (k: string) => Deno.env.get(k) ?? "";
   Deno.serve(async (req) => {
-    if (!env("NOTIFY_SECRET") || req.headers.get("x-qcs-secret") !== env("NOTIFY_SECRET")) return new Response("Unauthorized", { status: 401 });
+    if (!fromScheduler(req, "NOTIFY_SECRET")) return new Response("Unauthorized", { status: 401 });
     const result = await sendBatch({
       claim: async (n) => ((await db.rpc("claim_notifications", { p_limit: n })).data ?? []) as Outgoing[],
       finish: async (id, ok, error) => { await db.rpc("finish_notification", { p_id: id, p_ok: ok, p_error: error ?? null }); },

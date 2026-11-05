@@ -15,12 +15,13 @@
   "peerDependencies": {
     "@react-native-async-storage/async-storage": "*",
     "@supabase/supabase-js": "*",
+    "expo-application": "*",
+    "expo-constants": "*",
     "expo-image-manipulator": "*",
     "expo-image-picker": "*",
-    "react": "*",
-    "react-native": "*",
     "expo-notifications": "*",
-    "expo-constants": "*"
+    "react": "*",
+    "react-native": "*"
   },
   "devDependencies": {
     "@types/react": "~19.3.0",

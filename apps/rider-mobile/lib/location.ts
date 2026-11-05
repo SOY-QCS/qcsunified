@@ -8,13 +8,17 @@ import { supabase } from "@qcs/mobile";
  */
 export const LOCATION_TASK = "qcs-rider-location";
 
+/** One position for the server. `mocked` is Android's own warning that a fake-location app supplied it (fraud check). */
+const ping = (l: Location.LocationObject) =>
+  supabase().rpc("rider_ping", { p_lng: l.coords.longitude, p_lat: l.coords.latitude, p_accuracy: l.coords.accuracy ?? null, p_mocked: l.mocked ?? null });
+
 TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   if (error) return;
   const locs = (data as { locations?: Location.LocationObject[] })?.locations ?? [];
   const last = locs[locs.length - 1];
   if (!last) return;
   try {
-    await supabase().rpc("rider_ping", { p_lng: last.coords.longitude, p_lat: last.coords.latitude, p_accuracy: last.coords.accuracy ?? null });
+    await ping(last);
   } catch { /* no signal: the next ping will try again */ }
 });
 
@@ -38,7 +42,7 @@ export async function startTracking(onJob: boolean): Promise<string | null> {
   });
   // send one position straight away so dispatch can see you
   const now = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null);
-  if (now) await supabase().rpc("rider_ping", { p_lng: now.coords.longitude, p_lat: now.coords.latitude, p_accuracy: now.coords.accuracy ?? null });
+  if (now) await ping(now);
   return null;
 }
 

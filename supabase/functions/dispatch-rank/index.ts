@@ -5,6 +5,7 @@
  * Secrets: GOOGLE_MAPS_SERVER_KEY, DISPATCH_RANK_SECRET (the schedule sends it as "x-qcs-secret").
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { fromScheduler } from "../_shared/auth.ts";
 
 export interface RankDeps {
   tripsToRank: () => Promise<{ trip_id: string; pickup_lat: number; pickup_lng: number }[]>;
@@ -53,7 +54,7 @@ if (import.meta.main) {
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
   const key = Deno.env.get("GOOGLE_MAPS_SERVER_KEY") ?? "";
   Deno.serve(async (req) => {
-    if (req.headers.get("x-qcs-secret") !== Deno.env.get("DISPATCH_RANK_SECRET")) return new Response("Unauthorized", { status: 401 });
+    if (!fromScheduler(req, "DISPATCH_RANK_SECRET")) return new Response("Unauthorized", { status: 401 });
     const result = await rankAll({
       tripsToRank: async () => (await db.rpc("trips_to_rank")).data ?? [],
       candidates: async (id) => ((await db.rpc("candidate_riders", { p_trip: id, p_limit: 5 })).data ?? []).map((r: { rider_id: string }) => r.rider_id),

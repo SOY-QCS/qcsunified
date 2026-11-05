@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Banner, Button, Screen, Title, onNotificationTap, registerForPush, supabase, unregisterPush } from "@qcs/mobile";
+import { Banner, Button, Screen, Title, onNotificationTap, registerDevice, registerForPush, supabase, unregisterPush } from "@qcs/mobile";
 import { colors } from "@qcs/ui";
 import type { Queue } from "@qcs/types";
 import { useAuth } from "../../lib/auth";
@@ -24,7 +24,7 @@ export default function Home() {
   const pushToken = useRef<string | null>(null);
   useEffect(() => onQueue(setQ), []);
   // Job offers also arrive by push, so the phone rings even when the app is in the background.
-  useEffect(() => { registerForPush("rider").then((t) => { pushToken.current = t; }); }, []);
+  useEffect(() => { registerForPush("rider").then((t) => { pushToken.current = t; }); registerDevice("rider"); }, []);
   useEffect(() => onNotificationTap(() => { refreshOffer(); refreshJob(); }), [refreshOffer, refreshJob]);
   useEffect(() => {
     supabase().from("riders").select("is_online, score, offers_received, offers_accepted, cod_float_balance").eq("id", me).single()

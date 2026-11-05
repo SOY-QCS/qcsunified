@@ -9,6 +9,7 @@
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { inboundMessages, KEEP_MEDIA, replyRequest, validSignature, type Inbound } from "../_shared/whatsapp.ts";
+import { sameSecret } from "../_shared/auth.ts";
 
 export interface Deps {
   verifyToken: string;
@@ -21,7 +22,7 @@ export interface Deps {
 export async function handle(req: Request, deps: Deps): Promise<Response> {
   const url = new URL(req.url);
   if (req.method === "GET") {
-    const ok = url.searchParams.get("hub.mode") === "subscribe" && url.searchParams.get("hub.verify_token") === deps.verifyToken && deps.verifyToken !== "";
+    const ok = url.searchParams.get("hub.mode") === "subscribe" && sameSecret(url.searchParams.get("hub.verify_token"), deps.verifyToken);
     return ok ? new Response(url.searchParams.get("hub.challenge") ?? "", { status: 200 }) : new Response("Forbidden", { status: 403 });
   }
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });

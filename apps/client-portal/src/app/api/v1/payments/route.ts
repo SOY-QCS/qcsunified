@@ -2,6 +2,7 @@ import { z } from "zod";
 import { hubtel } from "@qcs/api-client";
 import { ApiError, caller, errorResponse, serviceClient } from "@/server/supabase";
 import { fakePayments, publicUrl, requireHubtel } from "@/server/hubtel-live";
+import { limited } from "@/server/rate-limit";
 
 const Body = z.discriminatedUnion("purpose", [
   z.object({ purpose: z.literal("order"), order_ids: z.array(z.uuid()).min(1).max(25), app: z.boolean().optional() }),
@@ -12,6 +13,7 @@ const Body = z.discriminatedUnion("purpose", [
 export async function POST(req: Request) {
   try {
     const me = await caller(req);
+    const stop = await limited("payments", `user:${me.user.id}`); if (stop) return stop;
     const parsed = Body.safeParse(await req.json());
     if (!parsed.success) throw new ApiError(400, "Check the payment details", parsed.error.issues.map((i) => i.message));
     const b = parsed.data;

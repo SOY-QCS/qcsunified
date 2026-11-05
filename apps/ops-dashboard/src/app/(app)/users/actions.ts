@@ -43,7 +43,8 @@ export async function inviteStaff(_prev: FormState, form: FormData): Promise<For
 
   if (!userId) {
     const h = await headers();
-    const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
+    // Prefer the configured address: the Host header comes from the browser and could be faked.
+    const origin = process.env.OPS_DASHBOARD_URL?.replace(/\/$/, "") ?? `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
     const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
       data: { full_name },
       redirectTo: `${origin}/auth/callback?next=/reset-password`,

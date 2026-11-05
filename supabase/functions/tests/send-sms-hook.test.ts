@@ -67,3 +67,18 @@ Deno.test("key rotation: either secret works", async () => {
   const res = await handle(signed({ user: { phone: "0241234567" }, sms: { otp: "1" } }), { hookSecrets: [btoa("old-secret-old-secret-old-secret"), secret], hubtel, fetchImpl: fakeFetch });
   assertEquals(res.status, 200);
 });
+
+Deno.test("too many codes for one phone: refused with 429 and nothing is sent", async () => {
+  let calls = 0;
+  const fakeFetch = (async () => { calls++; return new Response(JSON.stringify({ status: 0 })); }) as unknown as typeof fetch;
+  const counts = new Map<string, number>();
+  const allow = async (phone: string) => { const n = (counts.get(phone) ?? 0) + 1; counts.set(phone, n); return n <= 5; };
+  const results: number[] = [];
+  for (let i = 0; i < 7; i++) {
+    results.push((await handle(signed({ user: { phone: "233241234567" }, sms: { otp: "1" } }), { hookSecrets: [secret], hubtel, fetchImpl: fakeFetch, allow })).status);
+  }
+  assertEquals(results, [200, 200, 200, 200, 200, 429, 429]);
+  assertEquals(calls, 5);
+  // another phone is not affected
+  assertEquals((await handle(signed({ user: { phone: "233200000000" }, sms: { otp: "1" } }), { hookSecrets: [secret], hubtel, fetchImpl: fakeFetch, allow })).status, 200);
+});
