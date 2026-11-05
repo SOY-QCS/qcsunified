@@ -8,7 +8,8 @@
     "start": "next start -p 3001",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prebuild": "node ../../integrations/woocommerce/build-zip.mjs"
   },
   "dependencies": {
     "@qcs/api-client": "workspace:*",

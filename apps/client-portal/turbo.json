@@ -1,0 +1,10 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/integrations/woocommerce/**"],
+      "outputs": [".next/**", "!.next/cache/**", "public/downloads/**"]
+    }
+  }
+}

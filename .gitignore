@@ -11,3 +11,4 @@ supabase/.temp/
 supabase/.branches/
 .DS_Store
 supabase/functions/deno.lock
+apps/client-portal/public/downloads/qcs-ghana-shipping.zip

@@ -82,3 +82,7 @@ th { background: #faf8f5; font-weight: 600; }
 .quote-line { display: flex; justify-content: space-between; padding: 4px 0; }
 .total { font-size: 1.4rem; font-weight: 800; }
 .bad td { background: #fdecea; }
+
+/* developer docs */
+pre.code { background: #1f1b16; color: #f6efe6; padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; }

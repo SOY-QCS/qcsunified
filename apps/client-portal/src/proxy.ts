@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./lib/env";
 
-const PUBLIC_PATHS = ["/login", "/api/", "/pay/"];  // API routes check the login themselves (cookie or Bearer token)
+// API routes check the caller themselves (login cookie, app Bearer token, Business API key, or a signed callback).
+// Matched as "/x" or "/x/…" — no trailing slashes here.
+const PUBLIC_PATHS = ["/login", "/api", "/pay", "/docs"];
 
 /** Keeps the login session fresh and sends signed-out visitors to /login. */
 export async function proxy(request: NextRequest) {

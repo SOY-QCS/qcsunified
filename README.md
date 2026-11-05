@@ -419,3 +419,62 @@ merged), privacy, internal notes, reopen/close, SLA alerts, WhatsApp inbox (auto
 STOP/START, rider commands), 360 profiles, leads + automatic linking, churn alerts + recovery, segments (opt-in only),
 campaign approval and sending, unsubscribe, help articles, customer-service log and fee. Edge Function tests cover
 WhatsApp photos/names and free-text replies (`pnpm functions:test`).
+
+## Phase 11 — Business API & integrations
+
+**Public REST API** for vendors at `https://<portal>/api/business/v1` (code: `apps/client-portal/src/app/api/business/v1`,
+logic in `src/server/business/`). Docs: `/docs/api` (public) and `/api/business/v1/openapi.json` — both generated from
+the same Zod schemas the server validates with (`packages/types/src/business-api.ts`), so docs and code can't drift.
+
+| Call | What it does |
+| --- | --- |
+| `POST /rates` | Prices for a checkout page (every service that can deliver there). Nothing saved. |
+| `POST /quotes` | Exact price for one delivery, held 15 minutes. |
+| `POST /deliveries` | Book from `{quote_id}` or with the full details. `Idempotency-Key` header = never book twice. |
+| `POST /deliveries/bulk` | Up to 100. Each succeeds/fails on its own (201 / 207 / 400). Same-city drop-offs share trips (≤ 25). |
+| `GET /deliveries/{id}` | By tracking number or your own order number; includes history. |
+| `GET /deliveries` | Newest first; filter by status, dates, reference; `before` for the next page. |
+| `POST /deliveries/{id}/cancel` | Before pickup only (same rule as the app); refunds follow. |
+| `POST /deliveries/{id}/simulate` | Test keys only: move a practice delivery and fire its webhook. |
+| `GET /me` | Which business/mode the key belongs to ("Test connection"). |
+
+- **Keys**: `qcs_test_…` (practice deliveries: real prices, but nothing is dispatched or charged; kept apart from real orders)
+  and `qcs_live_…` (needs the business ID check). Shown once, stored only as a SHA-256 hash; revocable.
+- Addresses may be **text** (Google geocoding, falls back to the town and says so) or `lat`/`lng`. Bookings use the same
+  rules, pricing engine and `create_booking` as the app; the recipient still gets the confirm-your-location link.
+- 120 requests/minute/key (Settings `api_rate_per_minute`). Every call is logged (30 days) and answers with `QCS-Request-Id`.
+- Errors: `{"error": {"code", "message", "details"}}`.
+
+**Webhooks**: every status change of a vendor's deliveries is queued for their endpoints (test events → test endpoints).
+`QCS-Signature: t=<unix>,v1=<hex HMAC-SHA256(secret, "t.body")>`. Retries after 1 min, 5 min, 15 min, 1 h, 3 h, 6 h, 12 h, 24 h;
+an endpoint that keeps failing is turned off and the vendor is emailed. Sent by the `send-webhooks` Edge Function — schedule it
+like `send-notifications`:
+```sql
+select cron.schedule('send-webhooks', '10 seconds', $$
+  select net.http_post('https://<project>.supabase.co/functions/v1/send-webhooks',
+    headers := jsonb_build_object('x-qcs-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'notify_secret')))
+  where exists (select 1 from public.webhook_deliveries where status = 'queued' and next_attempt_at <= now())$$);
+```
+
+**Portal → Developers**: create/revoke keys (live after ID check), webhook endpoints (secret, test event, turn on/off,
+new secret), recent webhook messages with resend, API request log, and the integrations.
+
+**WooCommerce plugin** (`integrations/woocommerce/qcs-ghana-shipping`, downloadable from the portal as a zip that the portal
+build makes): "QCS Ghana" shipping method with live rates; books the delivery when an order is paid (Processing) — COD orders
+send the order total as COD; tracking number on the order; status updates as order notes (signed webhook at
+`/wp-json/qcs/v1/webhook`), completes delivered orders. Manual "Book QCS delivery" order action for retries.
+
+**Shopify app** (routes in the portal under `/api/integrations/shopify/`, setup in `integrations/shopify/README.md`):
+vendor connects from Developers → Shopify sign-in; live rates via CarrierService (needs carrier-calculated shipping on the
+merchant's plan); paid orders (COD orders when placed) become deliveries; order tagged `QCS <tracking>`; uninstall and GDPR
+webhooks handled. Needs `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` from a free Shopify Partner account.
+
+**Fix**: the portal's sign-in guard didn't recognise `/api` as public, so signed-out callers (Hubtel callbacks, the phone
+apps, the website's tracking lookups) were redirected to the login page. Now `/api`, `/pay` and `/docs` are public
+(each API route checks its own caller).
+
+### Tests
+`supabase/tests/110_business_api.sql` (90 checks): keys, log, rate limit, idempotency, delivery object, get/list/cancel,
+test mode, webhook queueing/retries/auto-off/SSRF guard, Shopify data privacy. `apps/client-portal/src/server/business/core.test.ts`
+and `src/server/integrations/shopify.test.ts` (25), `supabase/functions/tests/send-webhooks.test.ts`,
+`pnpm integrations:test` (WooCommerce helpers; same signature test vector as the sender, openssl and PHP).

@@ -11,7 +11,7 @@ export function serviceClient(): SupabaseClient {
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public details?: string[]) { super(message); }
+  constructor(public status: number, message: string, public details?: string[], public code?: string) { super(message); }
 }
 
 export interface Caller { user: User; db: SupabaseClient }

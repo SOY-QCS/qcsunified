@@ -1,0 +1,27 @@
+# QCS Ghana — Shopify app configuration (used with `shopify app deploy` from the Shopify CLI, or copy the values
+# into the Partner Dashboard by hand). Replace portal.qcsghana.com with the portal's real address (PUBLIC_API_URL).
+# The app code itself lives in the client portal: apps/client-portal/src/app/api/integrations/shopify/
+
+name = "QCS Ghana Delivery"
+client_id = "REPLACE_WITH_SHOPIFY_API_KEY"
+application_url = "https://portal.qcsghana.com/developers?tab=integrations"
+embedded = false
+
+[access_scopes]
+scopes = "read_orders,write_orders,read_shipping,write_shipping"
+
+[auth]
+redirect_urls = ["https://portal.qcsghana.com/api/integrations/shopify/callback"]
+
+[webhooks]
+api_version = "2025-10"
+
+  # Required by Shopify for every app (GDPR). We keep no Shopify customer profiles; shop/redact forgets the shop.
+  [[webhooks.subscriptions]]
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  uri = "https://portal.qcsghana.com/api/integrations/shopify/webhooks"
+
+  # orders/create, orders/paid and app/uninstalled are registered per shop when it connects (see callback route).
+
+[pos]
+embedded = false
