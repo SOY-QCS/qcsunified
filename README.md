@@ -478,3 +478,33 @@ apps, the website's tracking lookups) were redirected to the login page. Now `/a
 test mode, webhook queueing/retries/auto-off/SSRF guard, Shopify data privacy. `apps/client-portal/src/server/business/core.test.ts`
 and `src/server/integrations/shopify.test.ts` (25), `supabase/functions/tests/send-webhooks.test.ts`,
 `pnpm integrations:test` (WooCommerce helpers; same signature test vector as the sender, openssl and PHP).
+
+## Phase 12 — Analytics & reports
+
+**Ops dashboard → Analytics** (Super Admin, City Admin — own city only, Finance, Analyst, Hub Manager — own city).
+Filters in one row: city, period (last 7/30/90 days, this/last month, or exact dates), service; they live in the address bar.
+- **Overview**: orders, delivered, success rate (delivered ÷ delivered + returned), on-time %, revenue (fees earned),
+  average Express pickup time and pickup→delivery time, failed attempts — each compared with the previous period;
+  orders per day by service; revenue per day; why deliveries failed; COD money not yet with vendors (with riders,
+  overdue, held by QCS); table by city and by service.
+- **Riders**: deliveries, failed attempts, trips, online hours, hours on a job, utilisation (on a job ÷ online), earnings,
+  offer acceptance, rating. Online time is recorded from this phase on (`rider_shifts`).
+- **Vendors**: ranking by orders with change vs the previous period, success rate, revenue, COD.
+- **Demand map**: drop-offs per ~550 m square over the zone outlines (no paid map service), plus orders per zone.
+- **Email reports**: daily (yesterday), weekly (Mondays), monthly (the 1st) at 06:15 Accra, by email; Super Admins can
+  set them up for other staff. Each report covers a period once only.
+
+**Client portal → Analytics** (vendors): orders, delivered, success rate, on time, average booking→delivered time,
+orders per day, failure reasons, where orders go, by service; spend, COD collected/paid out/on its way and other fees
+only for the owner and staff with wallet access.
+
+**How it works**: `order_facts` keeps one row per booked delivery (time of each step, outcome, on-time verdict), updated
+by a trigger on every status change, so reports don't scan the full history (10,000+ deliveries a day). Existing orders
+were back-filled. On time (Settings, editable): Express within 90 min of booking; e-commerce by 21:00 on its pickup day;
+inter-city within 48 h (ready at the hub, for hub collection). Charts are plain SVG in `@qcs/ui/web` (no new dependency),
+with hover tooltips, legends and a "Show as table" view; service colours were checked for colour-blind separation.
+
+### Tests
+`supabase/tests/120_analytics.sql` (49 checks, every number worked out by hand from 8 known deliveries): facts, on-time,
+averages, success rate, revenue, previous period, per city/service, failure reasons, COD outstanding, rider utilisation,
+vendor ranking, heatmap, who may see what, vendor money privacy, scheduled reports. `packages/types/src/period.test.ts`.

@@ -59,6 +59,7 @@ export const OPS_NAV: NavItem[] = [
   { href: "/hubs",                label: "Hubs",              roles: ["super_admin", "city_admin", "hub_manager", "analyst", "dispatcher"], ready: true },
   { href: "/zones",               label: "Cities & zones",    roles: ["super_admin", "city_admin", "dispatcher", "analyst", "finance"], ready: true },
   { href: "/crm",                 label: "CRM & Support",     roles: ["super_admin", "city_admin", "support", "analyst"], ready: true },
+  { href: "/analytics",           label: "Analytics",         roles: ["super_admin", "city_admin", "finance", "analyst", "hub_manager"], ready: true },
   { href: "/finance",             label: "Finance",           roles: ["super_admin", "finance", "analyst"], ready: true },
   { href: "/finance/cod",         label: "COD cash",          roles: ["city_admin", "hub_manager"], ready: true },
   { href: "/pricing",             label: "Pricing",           roles: ["super_admin", "city_admin", "finance"], ready: true },
