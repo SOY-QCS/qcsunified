@@ -7,8 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "gh.qcs.client"
+      "supportsTablet": false,
+      "bundleIdentifier": "gh.qcs.client",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +21,11 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "gh.qcs.client"
+      "package": "gh.qcs.client",
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,7 +37,8 @@
         "expo-image-picker",
         {
           "cameraPermission": "QCS uses your camera to photograph your ID for verification.",
-          "photosPermission": "QCS needs your photos to upload your ID document."
+          "photosPermission": "QCS needs your photos to upload your ID document.",
+          "microphonePermission": false
         }
       ],
       [

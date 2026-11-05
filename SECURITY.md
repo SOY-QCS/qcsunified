@@ -20,6 +20,7 @@ Phones and websites talk to the database through Supabase with a login token. **
 | Edge Functions | ✅ each checks a signature (Supabase SMS hook, Meta WhatsApp) or a shared secret (schedules). **Tightened:** secrets are compared in constant time, and an empty/missing secret now means "locked" (before, `dispatch-rank` would have accepted an empty secret if the setting was forgotten). |
 | Web API routes | ✅ every route checks login, API key, Hubtel token or Shopify signature before using the server key. The test-only "fake payment" route is off in production. **Tightened:** staff invite emails use the configured dashboard address, not the browser-supplied one. |
 | Delivery codes | ⚠️→✅ **Fixed.** A rider could press "resend code" repeatedly, getting 5 fresh guesses each time. Riders may now resend 3 times per order per hour; dispatch is not limited. |
+| Account deletion | ✅ **Added** (store requirement): in both apps, on the website (`/delete-account`) and for Support (CRM → Account deletions). Personal details and the login are erased; business records stay without them. |
 | Public tracking | ✅ address and recipient details need the last 4 digits of the phone; 10 wrong tries locks that parcel's details for an hour. |
 | Business API | ✅ hashed keys, 120 requests/minute per key, live keys only after business verification, webhook URLs can't point at internal addresses. |
 

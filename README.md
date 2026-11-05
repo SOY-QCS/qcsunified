@@ -19,8 +19,12 @@ packages/
   pricing          the ONLY place prices are calculated
   api-client       one Supabase client for every app
   ui               colours and spacing shared by web and mobile
+tools/
+  import           bring existing clients and riders over from CSV / Google Sheets
+docs/              release guide (app stores), load-test report
 supabase/
   migrations/      the database, built step by step
+  load-test/       10,000-deliveries-a-day load test (pgbench)
   seed.sql         sample cities, zones, hubs and prices
   functions/       server functions (send-sms-hook: login codes via Hubtel)
   templates/       staff invite and password-reset emails
@@ -194,7 +198,7 @@ pnpm --filter @qcs/rider-mobile start     # Expo Go works for screens; backgroun
 pnpm --filter @qcs/ops-dashboard dev      # http://localhost:3000/dispatch
 ```
 Background location and the foreground notification need a development build
-(`eas build --profile development --platform android`); Expo Go can't run them.
+(`eas build --profile preview --platform android`); Expo Go can't run them.
 
 ### Going live
 1. **Scheduler.** `dispatch_tick` is scheduled by the migration with pg_cron (Supabase → Integrations → Cron must be on).
@@ -508,3 +512,56 @@ with hover tooltips, legends and a "Show as table" view; service colours were ch
 `supabase/tests/120_analytics.sql` (49 checks, every number worked out by hand from 8 known deliveries): facts, on-time,
 averages, success rate, revenue, previous period, per city/service, failure reasons, COD outstanding, rider utilisation,
 vendor ranking, heatmap, who may see what, vendor money privacy, scheduled reports. `packages/types/src/period.test.ts`.
+
+## Phase 13 — Hardening & launch
+
+**Security review** — full write-up and the before-launch checklist in [`SECURITY.md`](./SECURITY.md).
+- Signed-out visitors can now run only the 6 public-website database functions (they could run all of them before;
+  each checked its caller, but one slip would have been a hole). Internal helpers are server-only; new functions are
+  closed to visitors by default. A few small leaks closed (hub cash, tracking numbers, order payload).
+- `supabase/tests/130_security.sql` re-checks the whole database on every run: RLS on every table, visitor policies,
+  `search_path`, function permissions, private storage, views.
+- Edge Functions compare secrets in constant time; a missing secret means "locked", never "open".
+
+**Rate limiting** — one shared counter in the database (`rate_hit`, no paid service): login codes 5 per phone per hour,
+delivery-code resends 3 per order per hour (riders), public tracking / confirm-location / unsubscribe per IP,
+Google-billed address search, quotes, bookings and payments per user. Answers `429` with `Retry-After`.
+On Supabase cloud set Authentication → Rate Limits → SMS per hour = 1000 (see SECURITY.md).
+
+**Fraud checks** (Ops → Fraud checks; hourly scan): one phone with many accounts, recipient / rider / vendor with many
+failed or returned deliveries, fake GPS (Android's mock-location flag, jumps over 150 km/h), deliveries marked away from
+the pin, abnormal cancellations. Flags are reviewed (dismiss / confirm with a note, audited); new high-priority flags are
+emailed to admins; thresholds are `fraud_…` settings. The apps send the phone's own app ID after sign-in
+(`expo-application`, free, from Expo).
+
+**Load test** — results in [`docs/load-test.md`](./docs/load-test.md):
+`sudo -u postgres PLAIN_PG=1 DB_URL=postgresql:///postgres bash supabase/load-test/run.sh`.
+Result: 5× the busiest hour of a 10,000-a-day QCS with 0 failures. It found and fixed a bug (the 100th parcel on one
+route in one minute looped forever in the tracking-number generator), a booking slowdown (missing index), slow analytics
+(overview 7 s → 0.7 s, riders 73 s → 2.8 s) and long dispatch rounds after a flash sale (now at most 150 jobs per round).
+
+**Importing existing clients and riders** (`tools/import`): CSV file or Google Sheet, dry run first, a report sheet with
+the result of every row, safe to re-run (existing phone numbers are skipped).
+```bash
+SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… pnpm import:people clients --file old-clients.csv --dry-run
+SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… pnpm import:people riders --sheet "https://docs.google.com/spreadsheets/d/…" 
+```
+Column templates: `tools/import/templates/`. Imported people sign in with their phone and accept the T&C themselves.
+
+**App stores** — step-by-step guide in [`docs/release-mobile.md`](./docs/release-mobile.md) (accounts, `eas build`,
+`eas submit`, store listings, Data safety answers, background-location declaration, reviewer logins). Both apps:
+phone-only, no microphone or "draw over apps" permissions, `eas.json` with *preview* (APK for testers) and *production* profiles.
+Background location now needs a *preview* build (`eas build --profile preview --platform android`); Expo Go can't run it.
+
+**Account deletion** (required by both stores): QCS app → Settings / Rider app → Help & support → *Delete my account*;
+website `/delete-account`; Ops → CRM → Account deletions (log requests from WhatsApp/email, settle what's owed, delete
+within 30 days). Name, phone, email, addresses and the login are erased; orders and payments stay as "Deleted account".
+Website `/privacy`: a draft privacy notice for your lawyer to review.
+
+**Guides** (shareable docs): Operations dashboard admin user guide and QCS Rider quick-start guide.
+
+### Tests
+`130_security.sql` (whole-database audit + rate limits), `140_fraud.sql` (every pattern staged bad and normal, review,
+alerts), `150_import.sql`, `160_account_deletion.sql`, `170_load_fixes.sql`; `tools/import` (13), portal rate limits (4),
+Edge Function secret checks and OTP limit.
+

@@ -1,0 +1,4 @@
+name,phone,email,city,rider_type,status,vehicle_type,plate,make_model,momo_number,momo_network,commission_pct
+Yaw Asante,0244111222,,Accra,fleet,active,bike,M-24-GR 1234,Haojue 125,0244111222,MTN,
+Kwame Ofori,0277333444,,Kumasi,commission,active,bike,M-23-AS 987,Royal 150,0277333444,AirtelTigo,20
+Abena Sarpong,0509555666,,Takoradi,fleet,pending,ebike,,,0509555666,Telecel,

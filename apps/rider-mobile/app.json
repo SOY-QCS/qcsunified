@@ -7,8 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "gh.qcs.rider"
+      "supportsTablet": false,
+      "bundleIdentifier": "gh.qcs.rider",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +21,11 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "gh.qcs.rider"
+      "package": "gh.qcs.rider",
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,7 +37,8 @@
         "expo-image-picker",
         {
           "cameraPermission": "QCS Rider uses your camera to photograph your documents, your vehicle and parcels.",
-          "photosPermission": "QCS Rider needs your photos to upload your documents."
+          "photosPermission": "QCS Rider needs your photos to upload your documents.",
+          "microphonePermission": false
         }
       ],
       [
@@ -39,13 +47,16 @@
           "locationAlwaysAndWhenInUsePermission": "QCS Rider shares your location while you are online so we can send you nearby jobs and show customers where their parcel is.",
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true,
-          "isIosBackgroundLocationEnabled": true
+          "isIosBackgroundLocationEnabled": true,
+          "locationWhenInUsePermission": "QCS Rider uses your location to send you nearby jobs and to guide you to pickups and drop-offs."
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "QCS Rider uses the camera to scan parcel labels and photograph deliveries."
+          "cameraPermission": "QCS Rider uses the camera to scan parcel labels and photograph deliveries.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
         }
       ],
       [

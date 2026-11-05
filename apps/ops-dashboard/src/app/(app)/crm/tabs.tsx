@@ -2,7 +2,7 @@ import Link from "next/link";
 
 const TABS = [
   ["/crm", "Overview"], ["/crm/tickets", "Tickets"], ["/crm/tickets?channel=whatsapp", "WhatsApp inbox"], ["/crm/customers", "Customers"],
-  ["/crm/leads", "Leads"], ["/crm/alerts", "Churn alerts"], ["/crm/campaigns", "Campaigns"], ["/crm/service", "Customer service"], ["/crm/help", "Help centre"],
+  ["/crm/leads", "Leads"], ["/crm/alerts", "Churn alerts"], ["/crm/campaigns", "Campaigns"], ["/crm/service", "Customer service"], ["/crm/help", "Help centre"], ["/crm/deletions", "Account deletions"],
 ] as const;
 
 export function CrmTabs({ at }: { at: string }) {

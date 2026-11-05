@@ -1,0 +1,20 @@
+{
+  "name": "@qcs/import",
+  "private": true,
+  "type": "module",
+  "description": "Import existing clients and riders from CSV / Google Sheets into QCS",
+  "scripts": {
+    "start": "node src/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5",
+    "vitest": "^5.1.0"
+  }
+}

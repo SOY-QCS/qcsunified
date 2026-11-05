@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Banner, Button, Screen, Title, supabase } from "@qcs/mobile";
+import { Banner, Button, DeleteAccount, Screen, Title, supabase } from "@qcs/mobile";
 import { colors } from "@qcs/ui";
 import { useAuth } from "../../lib/auth";
 
@@ -50,6 +50,7 @@ export default function Settings() {
       <Banner text={msg?.text ?? null} kind={msg?.kind} />
       <Button title="Save" onPress={save} />
       <Button title="Back" kind="secondary" onPress={() => router.back()} />
+      <DeleteAccount />
     </Screen>
   );
 }

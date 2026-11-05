@@ -13,7 +13,8 @@
     "db:reset": "supabase db reset",
     "db:test": "bash supabase/tests/run.sh",
     "functions:test": "cd supabase/functions && deno test --allow-env tests/",
-    "integrations:test": "php integrations/woocommerce/tests/helpers-test.php"
+    "integrations:test": "php integrations/woocommerce/tests/helpers-test.php",
+    "import:people": "pnpm --filter @qcs/import --silent run start"
   },
   "devDependencies": {
     "supabase": "^3.0.0",

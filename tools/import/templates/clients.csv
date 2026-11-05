@@ -1,0 +1,4 @@
+name,phone,email,city,type,business_name,marketing_opt_in,momo_number,momo_network,cod_payout,tags,notes
+Ama Owusu,0241234567,ama@example.com,Accra,individual,,yes,,,,,
+Kofi Mensah,0201234567,kofi@kentehub.com,Accra,vendor,Kente Hub,yes,0201234567,Telecel,weekly,fashion;instagram,Sends 20+ parcels a week
+Esi Boateng,+233551234567,accounts@goldfields.com,Kumasi,corporate,Gold Fields Logistics,no,,,,,Invoiced monthly
