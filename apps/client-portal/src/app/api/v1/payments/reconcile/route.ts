@@ -3,7 +3,7 @@ import { serviceClient } from "@/server/supabase";
 import { hubtelCfg } from "@/server/hubtel-live";
 
 /**
- * GET /api/v1/payments/reconcile — run every few minutes by a scheduled job (Vercel Cron, Authorization: Bearer CRON_SECRET).
+ * GET /api/v1/payments/reconcile — run every 5 minutes by the database scheduler (job payments-reconcile in supabase/setup/schedule-jobs.sql; Authorization: Bearer CRON_SECRET).
  * Catches payments whose Hubtel callback never arrived, by asking Hubtel directly (needs the status check to be configured).
  */
 export async function GET(req: Request) {

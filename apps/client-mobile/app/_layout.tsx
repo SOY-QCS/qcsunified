@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors } from "@qcs/ui";
+import { AppGate } from "@qcs/mobile";
 import { AuthProvider, needsOnboarding, useAuth } from "../lib/auth";
 
 function Gate() {
@@ -31,7 +32,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <StatusBar style="dark" />
-        <Gate />
+        <AppGate app="client">
+          <Gate />
+        </AppGate>
       </AuthProvider>
     </SafeAreaProvider>
   );

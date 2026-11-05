@@ -120,4 +120,16 @@ Apple's export-compliance question is answered in the code already: the apps use
 
 ## 7. Updating the apps later
 
-Change the code, then run `eas build --profile production` and `eas submit` again; version numbers go up by themselves. People get the update through the store. Database and website changes go live without a new app version.
+There are three kinds of update:
+
+| Change | How | Reaches phones |
+|---|---|---|
+| Screens and logic only (most fixes) | `eas update --channel production --message "…"` | minutes: downloaded in the background, used the next time the app opens |
+| A new native module or permission, or a new app version for the store | `eas build --profile production` + `eas submit` (version numbers go up by themselves) | after store review (1–3 days), when people update |
+| Database, website or prices | no app change needed | immediately |
+
+**Set up quick fixes once per app:** run `eas update:configure` in `apps/client-mobile` and `apps/rider-mobile`. It adds the project's update address to `app.json`. The *preview* builds listen on the `preview` channel (staging) and the *production* builds on `production`. A quick fix only reaches builds of the same app version (`runtimeVersion` = the app version), so a store release always starts a fresh line.
+
+**Forcing old versions off.** When a store version must be the minimum (a serious bug, a change the server needs), set `app_min_version_rider` / `app_min_version_client` in Ops → Settings. Older apps then show only a "Please update" screen with the store link. `app_latest_version_…` shows a gentle "update available" banner instead. Paste the App Store links into `app_store_url_…_ios` once the apps are live (the Play links are already set).
+
+**A message for everyone** ("Public holiday: deliveries until 3pm"): Settings → `app_notice`. **Pausing one city:** Ops → Cities & zones → Pause bookings.

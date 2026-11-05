@@ -1,0 +1,70 @@
+# Runs every test on every push and pull request. A red ✗ on GitHub = don't ship (docs/go-live.md, step 11).
+# Free for this repository within GitHub's monthly Actions minutes.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apps:
+    name: Apps & packages (types + unit tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4          # version comes from "packageManager" in package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run typecheck test
+
+  database:
+    name: Database (migrations, security rules, business rules)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Database tests
+        env:
+          PLAIN_PG: "1"
+          DB_URL: postgresql://postgres:postgres@localhost:5432/postgres
+        run: bash supabase/tests/run.sh
+
+  functions:
+    name: Edge Functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check and test
+        working-directory: supabase/functions
+        run: |
+          deno check */index.ts
+          deno task test
+
+  plugins:
+    name: WooCommerce plugin
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: php integrations/woocommerce/tests/helpers-test.php

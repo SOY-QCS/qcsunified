@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors } from "@qcs/ui";
+import { AppGate } from "@qcs/mobile";
 import { AuthProvider, placeFor, useAuth } from "../lib/auth";
 import "../lib/location";   // registers the background location task at start-up
 import "../lib/queue";      // starts the offline queue retry loop
@@ -36,7 +37,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <StatusBar style="dark" />
-        <Gate />
+        <AppGate app="rider">
+          <Gate />
+        </AppGate>
       </AuthProvider>
     </SafeAreaProvider>
   );

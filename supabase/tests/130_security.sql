@@ -29,7 +29,7 @@ select tests.ok(not exists (select 1 from pg_proc p join pg_namespace n on n.oid
 select tests.ok((select array_agg(p.proname::text order by p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                  where n.nspname = 'public' and p.prorettype <> 'trigger'::regtype and has_function_privilege('anon', p.oid, 'execute')
                    and p.oid not in (select objid from pg_depend where deptype = 'e'))
-                = array['address_link', 'confirm_address', 'has_role', 'is_ops', 'track_order', 'unsubscribe'],
+                = array['address_link', 'app_status', 'confirm_address', 'has_role', 'is_ops', 'track_order', 'unsubscribe'],
                 'visitors can run only the public-website functions');
 
 -- 5. Internal helpers ("_name") are server-only, except the two used inside row-level security rules.
@@ -43,7 +43,7 @@ select tests.ok(coalesce((select array_agg(p.proname::text order by p.proname) f
                  where n.nspname = 'public' and p.prosecdef and p.prorettype <> 'trigger'::regtype and has_function_privilege('authenticated', p.oid, 'execute')
                    and p.prosrc !~* '(auth\.uid|is_trusted|_need|is_ops|has_role|is_admin|is_finance|my_vendor_ids|my_hub_ids|_hub_staff|_report_cities|_cs_order|_is_ticket_customer|raise exception)'
                    and p.oid not in (select objid from pg_depend where deptype = 'e')), '{}')
-                <@ array['address_link', 'get_setting', 'hub_point', 'nearest_hub', 'setting_int', 'unsubscribe', 'zone_for_point'],
+                <@ array['address_link', 'app_status', 'get_setting', 'hub_point', 'nearest_hub', 'setting_int', 'unsubscribe', 'zone_for_point'],
                 'every other owner-rights function checks its caller');
 
 -- 7. Storage buckets are private; views respect the reader's permissions.

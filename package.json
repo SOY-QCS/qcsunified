@@ -14,7 +14,8 @@
     "db:test": "bash supabase/tests/run.sh",
     "functions:test": "cd supabase/functions && deno test --allow-env tests/",
     "integrations:test": "php integrations/woocommerce/tests/helpers-test.php",
-    "import:people": "pnpm --filter @qcs/import --silent run start"
+    "import:people": "pnpm --filter @qcs/import --silent run start",
+    "check:deploy": "pnpm --filter @qcs/deploy-check --silent run start"
   },
   "devDependencies": {
     "supabase": "^3.0.0",

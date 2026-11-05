@@ -20,6 +20,7 @@ export const LIMITS = {
   quotes:       { max: 60,  windowS: 60 },     // per user (each quote may call Google Routes)
   bookings:     { max: 20,  windowS: 60 },     // per user
   payments:     { max: 10,  windowS: 60 },     // starting a Hubtel checkout, per user
+  health:       { max: 30,  windowS: 60 },     // uptime checker, per IP
 } as const;
 export type LimitName = keyof typeof LIMITS;
 

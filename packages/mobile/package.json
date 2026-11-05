@@ -20,6 +20,7 @@
     "expo-image-manipulator": "*",
     "expo-image-picker": "*",
     "expo-notifications": "*",
+    "expo-updates": "*",
     "react": "*",
     "react-native": "*"
   },

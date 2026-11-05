@@ -1,0 +1,12 @@
+{
+  "name": "@qcs/deploy-check",
+  "private": true,
+  "type": "module",
+  "description": "Checks that a QCS environment (staging or live) is set up completely",
+  "scripts": {
+    "start": "node src/check.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "@supabase/supabase-js": "^2.118.0" },
+  "devDependencies": { "@types/node": "^20", "typescript": "^5" }
+}

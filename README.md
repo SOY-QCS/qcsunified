@@ -21,7 +21,8 @@ packages/
   ui               colours and spacing shared by web and mobile
 tools/
   import           bring existing clients and riders over from CSV / Google Sheets
-docs/              release guide (app stores), load-test report
+  deploy-check     is an environment (staging / live) set up completely?  pnpm check:deploy
+docs/              go-live runbook, release guide (app stores), load-test report
 supabase/
   migrations/      the database, built step by step
   load-test/       10,000-deliveries-a-day load test (pgbench)
@@ -564,4 +565,32 @@ Website `/privacy`: a draft privacy notice for your lawyer to review.
 `130_security.sql` (whole-database audit + rate limits), `140_fraud.sql` (every pattern staged bad and normal, review,
 alerts), `150_import.sql`, `160_account_deletion.sql`, `170_load_fixes.sql`; `tools/import` (13), portal rate limits (4),
 Edge Function secret checks and OTP limit.
+
+## Phase 14 — Running QCS safely
+
+**Setting up an environment:** follow [`docs/go-live.md`](./docs/go-live.md) (staging first, then live). It covers accounts and
+costs, Supabase, Edge Functions, scheduled jobs, the three Vercel sites, outside services, monitoring and bad days.
+All 18 scheduled jobs are in `supabase/setup/schedule-jobs.sql` (run once in the SQL editor). The 5-minute payment check
+moved there from Vercel Cron, which needs a paid Vercel plan for anything more frequent than daily.
+`pnpm check:deploy` (with `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PORTAL_URL`, `OPS_URL`, `SITE_URL`) checks it all.
+
+**Forced updates and quick fixes.**
+- Ops → Settings → `app_min_version_client` / `_rider`: older apps show only "Please update" with the store link. This works before sign-in.
+- `app_latest_version_…` shows a gentle banner instead; `app_notice` shows a message at the top of both apps and the portal.
+- Quick fixes go out with `eas update` (expo-updates, from Expo): downloaded in the background, used the next time the app opens.
+  Run `eas update:configure` once per app (see `docs/release-mobile.md` §7).
+
+**Pause bookings in a city** (Ops → Cities & zones; Super Admin or that city's Admin; up to 7 days, with a message).
+New bookings are refused everywhere (apps, portal, API, shop plugins); deliveries already booked carry on.
+The message shows at the top of both apps and the portal. Audited.
+
+**System health** (Ops → System health): messages waiting or failing, vendor webhooks, card/MoMo payments failing or
+unconfirmed, payouts, jobs without riders, cities with no rider online, scheduled jobs failing or not running.
+Red problems are emailed to Super Admins (checked every 10 minutes, at most every 3 hours per problem); recovery is recorded.
+`/api/health` on the portal is for a free uptime checker (UptimeRobot): 503 when the database is down **or** a check is red.
+
+**Automatic tests on GitHub** (`.github/workflows/ci.yml`): apps and packages, database, Edge Functions and the
+WooCommerce plugin run on every push. A red ✗ means don't ship.
+
+Tests: `supabase/tests/180_launch_ops.sql` (versions, pausing, health and alerts, deployment check).
 

@@ -5,4 +5,5 @@ export * from "./upload";
 export * from "./push";
 export * from "./device";
 export * from "./delete-account";
+export * from "./app-gate";
 export * from "./support";
