@@ -594,3 +594,14 @@ WooCommerce plugin run on every push. A red ✗ means don't ship.
 
 Tests: `supabase/tests/180_launch_ops.sql` (versions, pausing, health and alerts, deployment check).
 
+
+## Brand and public website pages
+
+- **Logo:** the QCS logo is in every app. App icons, Android adaptive icons (blue background, logo inside the safe area, a white version for themed icons), and opening screens (`expo-splash-screen`, Expo's own free package, logo on QCS blue `#00539F`). The Rider app's icon says "RIDER" so riders can tell the two apps apart. The websites use the orange "Q" as their tab icon.
+- **New website pages:**
+  - `/rates`: a price check from one delivery area to another. It uses the same pricing engine and price list as a real booking, saves nothing and calls no paid map service; Express is estimated from the straight-line distance.
+  - `/hubs`: address, phone, opening hours and a Google Maps directions link for each hub.
+  - `/riders`: how to become a rider, with the store link.
+- **Where the data comes from:** the portal's public endpoints `GET /api/v1/public` (cities, areas, hubs and app store links, cached for 5 minutes) and `POST /api/v1/rates` (limited to 30 a minute per visitor). The website reaches them through `NEXT_PUBLIC_API_URL`.
+- **Before launch, update in Ops:** hub addresses and phone numbers (Hubs), area names (Cities & zones), and prices (Pricing). The pages update within 5 minutes.
+- **Tests:** `apps/client-portal/src/server/public-rates.test.ts` and `supabase/tests/200_public_places.sql`.

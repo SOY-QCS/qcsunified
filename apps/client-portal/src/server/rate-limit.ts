@@ -21,6 +21,7 @@ export const LIMITS = {
   bookings:     { max: 20,  windowS: 60 },     // per user
   payments:     { max: 10,  windowS: 60 },     // starting a Hubtel checkout, per user
   health:       { max: 30,  windowS: 60 },     // uptime checker, per IP
+  publicRates:  { max: 30,  windowS: 60 },     // website rate calculator, per IP (no map service is called)
 } as const;
 export type LimitName = keyof typeof LIMITS;
 
